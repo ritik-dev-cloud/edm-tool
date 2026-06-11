@@ -3,12 +3,15 @@
 <head>
 <meta charset="UTF-8">
 <title>EDM Builder — Image to Email HTML</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="styles.css">
 </head>
 <body>
 
 <header class="topbar">
-  <h1>EDM Builder <span class="tag">v0.8</span></h1>
+  <h1><span>EDM Builder<span class="brand-sub">Communique · Email Design Studio</span></span> <span class="tag">v0.8</span></h1>
   <input type="text" id="projectNameInput" class="project-name-input" placeholder="Untitled project — click to name" />
   <span id="saveIndicator" class="save-indicator"></span>
   <div class="project-io">
@@ -69,6 +72,37 @@
     <div class="step-text">
       <b>Export</b>
       <span class="step-hint">Click "Export for ▾" → pick your platform → download.</span>
+    </div>
+  </div>
+</div>
+
+<div class="stats-strip" id="statsStrip">
+  <div class="stat-card">
+    <div class="stat-icon i1">🖼️</div>
+    <div class="stat-meta">
+      <div class="stat-value" id="statImage">—</div>
+      <div class="stat-label">Image size</div>
+    </div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon i2">✂️</div>
+    <div class="stat-meta">
+      <div class="stat-value" id="statSlices">0</div>
+      <div class="stat-label">Slices drawn</div>
+    </div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon i3">🔗</div>
+    <div class="stat-meta">
+      <div class="stat-value" id="statLinks">0</div>
+      <div class="stat-label">Links added</div>
+    </div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon i4">📐</div>
+    <div class="stat-meta">
+      <div class="stat-value" id="statExport">640px</div>
+      <div class="stat-label">Export width</div>
     </div>
   </div>
 </div>
@@ -255,5 +289,26 @@
 <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
 <script src="exporter.js"></script>
 <script src="app.js"></script>
+<script>
+/* Dashboard stat cards — mirrors live values from the app UI */
+(function () {
+  const $ = (id) => document.getElementById(id);
+  function refreshStats() {
+    const canvas = $('canvas'), wrap = $('canvasWrap');
+    $('statImage').textContent = (wrap && !wrap.classList.contains('hidden') && canvas && canvas.width > 0)
+      ? canvas.width + ' × ' + canvas.height : '—';
+    $('statSlices').textContent = ($('sliceCount') && $('sliceCount').textContent) || '0';
+    const urls = document.querySelectorAll('#sliceList input[type="url"]');
+    $('statLinks').textContent = Array.from(urls).filter(i => i.value.trim()).length;
+    const activePreset = document.querySelector('#esWidthPresets .es-preset.active');
+    let w = activePreset ? activePreset.dataset.width : '640';
+    if (w === 'custom') w = ($('esCustomWidth') && $('esCustomWidth').value) || '?';
+    if (w === 'original') { $('statExport').textContent = 'Original'; }
+    else { $('statExport').textContent = w + 'px'; }
+  }
+  setInterval(refreshStats, 700);
+  refreshStats();
+})();
+</script>
 </body>
 </html>

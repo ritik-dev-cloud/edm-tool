@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Gmail Paste Sanitizer Test</title>
+<style>
+  body { font-family: Arial, sans-serif; padding: 20px; background: #f5f5f5; }
+  .variant { background: #fff; padding: 16px; margin-bottom: 24px; border-radius: 8px; }
+  .variant h2 { margin-top: 0; font-size: 16px; }
+  button { padding: 8px 16px; font-size: 14px; cursor: pointer; margin-bottom: 12px; }
+  .ok { color: green; font-weight: bold; }
+</style>
+</head>
+<body>
+<h1>Gmail Paste Sanitizer Test</h1>
+<p>Each variant uses a different anti-gap technique. Copy → paste into Gmail compose → inspect what survives.</p>
+
+<!-- VARIANT A: current exporter approach — table, tr resets, td height lock, img display:block -->
+<div class="variant">
+  <h2>A — Current (table + display:block + td height lock)</h2>
+  <button onclick="copyVariant('vA', this)">Copy A</button>
+  <div id="vA"><table role="presentation" cellpadding="0" cellspacing="0" border="0" width="600" style="border-collapse:collapse;border-spacing:0;width:600px;font-size:0;line-height:0;"><tr style="line-height:0;font-size:0;padding:0;margin:0;border:0 none;"><td align="left" valign="top" width="600" style="width:600px;padding:0;margin:0;border:0 none;font-size:0;line-height:0;height:80px;line-height:80px;"><a href="https://example.com/1" target="_blank" style="display:block;text-decoration:none;border:0 none;font-size:0;line-height:0;"><img src="https://res.cloudinary.com/demo/image/upload/w_600,h_80,c_fill,g_north/sample.jpg" width="600" height="80" border="0" style="display:block;vertical-align:middle;border:0 none;width:600px;height:80px;line-height:0;font-size:0;" alt="r1"></a></td></tr><tr style="line-height:0;font-size:0;padding:0;margin:0;border:0 none;"><td align="left" valign="top" width="600" style="width:600px;padding:0;margin:0;border:0 none;font-size:0;line-height:0;height:80px;line-height:80px;"><a href="https://example.com/2" target="_blank" style="display:inline-block;vertical-align:middle;text-decoration:none;border:0 none;font-size:0;line-height:0;"><img src="https://res.cloudinary.com/demo/image/upload/w_300,h_80,c_fill,g_west/sample.jpg" width="300" height="80" border="0" style="display:inline-block;vertical-align:middle;border:0 none;width:300px;height:80px;line-height:0;font-size:0;" alt="r2a"></a><a href="https://example.com/3" target="_blank" style="display:inline-block;vertical-align:middle;text-decoration:none;border:0 none;font-size:0;line-height:0;"><img src="https://res.cloudinary.com/demo/image/upload/w_300,h_80,c_fill,g_east/sample.jpg" width="300" height="80" border="0" style="display:inline-block;vertical-align:middle;border:0 none;width:300px;height:80px;line-height:0;font-size:0;" alt="r2b"></a></td></tr><tr style="line-height:0;font-size:0;padding:0;margin:0;border:0 none;"><td align="left" valign="top" width="600" style="width:600px;padding:0;margin:0;border:0 none;font-size:0;line-height:0;height:80px;line-height:80px;"><a href="https://example.com/4" target="_blank" style="display:block;text-decoration:none;border:0 none;font-size:0;line-height:0;"><img src="https://res.cloudinary.com/demo/image/upload/w_600,h_80,c_fill,g_south/sample.jpg" width="600" height="80" border="0" style="display:block;vertical-align:middle;border:0 none;width:600px;height:80px;line-height:0;font-size:0;" alt="r3"></a></td></tr></table></div>
+</div>
+
+<!-- VARIANT B: no tables — stacked divs, zero whitespace, font-size:0 on parents -->
+<div class="variant">
+  <h2>B — Div-based (no table, font-size:0 parents, no display dependence)</h2>
+  <button onclick="copyVariant('vB', this)">Copy B</button>
+  <div id="vB"><div style="font-size:0;line-height:0;width:600px;"><div style="font-size:0;line-height:0;"><a href="https://example.com/1" target="_blank" style="font-size:0;line-height:0;text-decoration:none;"><img src="https://res.cloudinary.com/demo/image/upload/w_600,h_80,c_fill,g_north/sample.jpg" width="600" height="80" border="0" style="vertical-align:bottom;border:0 none;width:600px;height:80px;" alt="r1"></a></div><div style="font-size:0;line-height:0;white-space:nowrap;"><a href="https://example.com/2" target="_blank" style="font-size:0;line-height:0;text-decoration:none;"><img src="https://res.cloudinary.com/demo/image/upload/w_300,h_80,c_fill,g_west/sample.jpg" width="300" height="80" border="0" style="vertical-align:bottom;border:0 none;width:300px;height:80px;" alt="r2a"></a><a href="https://example.com/3" target="_blank" style="font-size:0;line-height:0;text-decoration:none;"><img src="https://res.cloudinary.com/demo/image/upload/w_300,h_80,c_fill,g_east/sample.jpg" width="300" height="80" border="0" style="vertical-align:bottom;border:0 none;width:300px;height:80px;" alt="r2b"></a></div><div style="font-size:0;line-height:0;"><a href="https://example.com/4" target="_blank" style="font-size:0;line-height:0;text-decoration:none;"><img src="https://res.cloudinary.com/demo/image/upload/w_600,h_80,c_fill,g_south/sample.jpg" width="600" height="80" border="0" style="vertical-align:bottom;border:0 none;width:600px;height:80px;" alt="r3"></a></div></div></div>
+</div>
+
+<!-- VARIANT C: single-row table, one td per column strip; full-height column slices avoid horizontal seams -->
+<div class="variant">
+  <h2>C — Table but vertical-align:bottom only (no display, no height lock)</h2>
+  <button onclick="copyVariant('vC', this)">Copy C</button>
+  <div id="vC"><table role="presentation" cellpadding="0" cellspacing="0" border="0" width="600" style="border-collapse:collapse;border-spacing:0;width:600px;"><tbody><tr><td style="font-size:0px;line-height:0px;padding:0;"><a href="https://example.com/1" target="_blank" style="font-size:0px;line-height:0px;text-decoration:none;"><img src="https://res.cloudinary.com/demo/image/upload/w_600,h_80,c_fill,g_north/sample.jpg" width="600" height="80" border="0" style="vertical-align:bottom;border:none;" alt="r1"></a></td></tr><tr><td style="font-size:0px;line-height:0px;padding:0;"><a href="https://example.com/2" target="_blank" style="font-size:0px;line-height:0px;text-decoration:none;"><img src="https://res.cloudinary.com/demo/image/upload/w_300,h_80,c_fill,g_west/sample.jpg" width="300" height="80" border="0" style="vertical-align:bottom;border:none;" alt="r2a"></a><a href="https://example.com/3" target="_blank" style="font-size:0px;line-height:0px;text-decoration:none;"><img src="https://res.cloudinary.com/demo/image/upload/w_300,h_80,c_fill,g_east/sample.jpg" width="300" height="80" border="0" style="vertical-align:bottom;border:none;" alt="r2b"></a></td></tr><tr><td style="font-size:0px;line-height:0px;padding:0;"><a href="https://example.com/4" target="_blank" style="font-size:0px;line-height:0px;text-decoration:none;"><img src="https://res.cloudinary.com/demo/image/upload/w_600,h_80,c_fill,g_south/sample.jpg" width="600" height="80" border="0" style="vertical-align:bottom;border:none;" alt="r3"></a></td></tr></tbody></table></div>
+</div>
+
+<!-- ANALYZER: paste Gmail's sanitized content back here to capture what survived -->
+<div class="variant" style="border:3px solid #e91e63;">
+  <h2 style="color:#e91e63;">🔬 ANALYZER — copy inside Gmail compose, then click this button</h2>
+  <button id="readClipBtn" style="font-size:18px;padding:14px 28px;background:#e91e63;color:#fff;border:none;border-radius:6px;">📋 Read clipboard now</button>
+  <div id="readStatus" style="margin:10px 0;font-weight:bold;"></div>
+  <div id="pasteZone" contenteditable="true" style="min-height:80px;border:2px dashed #e91e63;padding:12px;background:#fff0f5;font-size:14px;">…or click here and press Ctrl+V</div>
+  <h3>Captured HTML (what Gmail kept):</h3>
+  <textarea id="capturedHtml" style="width:100%;height:200px;font-family:monospace;font-size:11px;" readonly></textarea>
+</div>
+
+<script>
+function record(html, types) {
+  document.getElementById('capturedHtml').value = html;
+  window.__capturedGmailHtml = html;
+  window.__capturedTypes = types;
+  document.getElementById('readStatus').innerHTML = '<span style="color:green;font-size:16px;">✓ Captured ' + html.length + ' chars (' + types.join(', ') + ') — tell Claude it is done.</span>';
+}
+document.getElementById('readClipBtn').addEventListener('click', async () => {
+  try {
+    const items = await navigator.clipboard.read();
+    let html = '', types = [];
+    for (const item of items) {
+      types.push(...item.types);
+      if (item.types.includes('text/html')) {
+        html = await (await item.getType('text/html')).text();
+      } else if (item.types.includes('text/plain') && !html) {
+        html = '(PLAIN TEXT ONLY): ' + await (await item.getType('text/plain')).text();
+      }
+    }
+    record(html || '(clipboard empty)', types);
+  } catch (err) {
+    document.getElementById('readStatus').innerHTML = '<span style="color:red;">Error: ' + err.message + ' — use the Ctrl+V box below instead.</span>';
+  }
+});
+const zone = document.getElementById('pasteZone');
+zone.addEventListener('paste', (e) => {
+  e.preventDefault();
+  const types = Array.from(e.clipboardData.types);
+  const html = e.clipboardData.getData('text/html') || '(PLAIN TEXT ONLY): ' + e.clipboardData.getData('text/plain');
+  record(html, types);
+  zone.innerHTML = 'Pasted ✓';
+});
+
+async function copyVariant(id, btn) {
+  const html = document.getElementById(id).innerHTML;
+  await navigator.clipboard.write([
+    new ClipboardItem({
+      'text/html': new Blob([html], { type: 'text/html' }),
+      'text/plain': new Blob([' '], { type: 'text/plain' })
+    })
+  ]);
+  btn.textContent = 'Copied ✓';
+  btn.classList.add('ok');
+  setTimeout(() => { btn.textContent = 'Copy ' + id.slice(1); btn.classList.remove('ok'); }, 2000);
+}
+</script>
+</body>
+</html>
