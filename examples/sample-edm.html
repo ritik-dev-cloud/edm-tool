@@ -1,0 +1,259 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<!--
+  =================================================================================
+  SAMPLE EDM — Communique-style event recap email
+  Built clean (no Word HTML, no broken Gmail URLs).
+  640px wide. Outlook-safe nested table. Inlined CSS. Hybrid: real text + image slices.
+
+  HOW TO USE
+    1. Open this file in a browser to see how it renders.
+    2. Replace placeholder images (picsum.photos URLs) with your real CDN-hosted images.
+    3. Replace href="#" with your real YouTube / landing-page URLs.
+    4. Edit the text content directly in the HTML — body copy is REAL TEXT, not images,
+       so it's searchable, accessible, and won't blur on mobile.
+    5. Paste the modified HTML into Mailchimp / SES / Outlook to send.
+
+  WHY THIS WORKS WHERE THE VENDOR FILE BREAKS
+    - Width is 640px (vendor used 850px → Outlook clips it).
+    - Images use placeholder URLs you can swap to a CDN (vendor used Gmail-only URLs).
+    - Body copy is real HTML text (vendor baked everything into images → blurry on phones).
+    - CSS is inlined on every element (Gmail strips <style> blocks in many contexts).
+    - cellpadding/cellspacing/border=0 + font-size:0;line-height:0 on <td> kills slice gaps.
+    - "Bulletproof" CTA buttons use VML for Outlook + table fallback for everything else.
+  =================================================================================
+-->
+<html xmlns="http://www.w3.org/1999/xhtml" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office" lang="en">
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="x-apple-disable-message-reformatting" />
+  <title>Communique Summit 2025 — Recap</title>
+  <!--[if mso]>
+  <style type="text/css">
+    table, td, div, p, a { font-family: Arial, Helvetica, sans-serif !important; }
+  </style>
+  <xml>
+    <o:OfficeDocumentSettings>
+      <o:AllowPNG/>
+      <o:PixelsPerInch>96</o:PixelsPerInch>
+    </o:OfficeDocumentSettings>
+  </xml>
+  <![endif]-->
+  <style type="text/css">
+    body { margin: 0; padding: 0; background-color: #f4f5f7; -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%; }
+    table { border-collapse: collapse; mso-table-lspace: 0; mso-table-rspace: 0; }
+    img { -ms-interpolation-mode: bicubic; display: block; border: 0; outline: none; text-decoration: none; height: auto; line-height: 100%; }
+    a { color: #ff9900; text-decoration: none; }
+    @media only screen and (max-width: 640px) {
+      .container { width: 100% !important; }
+      .responsive-img { width: 100% !important; height: auto !important; }
+      .video-tile { display: block !important; width: 100% !important; }
+      .team-cell { display: block !important; width: 100% !important; max-width: 100% !important; }
+    }
+  </style>
+</head>
+<body style="margin:0;padding:0;background-color:#f4f5f7;">
+
+<!-- Hidden preheader text (shows in inbox preview next to subject line) -->
+<div style="display:none;font-size:1px;color:#fefefe;line-height:1px;max-height:0px;max-width:0px;opacity:0;overflow:hidden;">
+  Watch every session from the Communique Summit 2025 — keynote videos, speaker highlights, and the year-in-review reel inside.
+</div>
+
+<!-- ============ Outer wrapper ============ -->
+<table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color:#f4f5f7;">
+  <tr>
+    <td align="center" style="padding:20px 10px;">
+
+      <!-- ============ 640px container ============ -->
+      <table role="presentation" class="container" border="0" cellpadding="0" cellspacing="0" width="640" style="width:640px;max-width:640px;background-color:#ffffff;">
+
+        <!-- ============ HEADER: sliced image (logo + illustration) ============ -->
+        <tr>
+          <td style="padding:0;font-size:0;line-height:0;">
+            <a href="https://example.com/summit-2025" target="_blank" style="display:block;text-decoration:none;">
+              <img class="responsive-img" src="https://picsum.photos/seed/header/640/280" width="640" height="280" alt="Communique Summit 2025" style="display:block;width:100%;max-width:640px;height:auto;border:0;" />
+            </a>
+          </td>
+        </tr>
+
+        <!-- ============ HERO HEADLINE: real HTML text ============ -->
+        <tr>
+          <td align="center" style="padding:32px 40px 8px;font-family:Arial,Helvetica,sans-serif;">
+            <h1 style="margin:0;font-size:28px;line-height:34px;color:#1f2329;font-weight:700;">
+              Communique Summit 2025
+            </h1>
+            <p style="margin:6px 0 0;font-size:16px;color:#6b7280;font-weight:400;">
+              IT'S A WRAP!
+            </p>
+          </td>
+        </tr>
+
+        <!-- ============ HERO IMAGE: clickable, links to recap playlist ============ -->
+        <tr>
+          <td style="padding:24px 0 0;font-size:0;line-height:0;">
+            <a href="https://www.youtube.com/playlist?list=YOUR_PLAYLIST_ID" target="_blank" style="display:block;text-decoration:none;">
+              <img class="responsive-img" src="https://picsum.photos/seed/hero/640/360" width="640" height="360" alt="Watch the full session playlist" style="display:block;width:100%;max-width:640px;height:auto;border:0;" />
+            </a>
+          </td>
+        </tr>
+
+        <!-- ============ BODY COPY: real text in <td> ============ -->
+        <tr>
+          <td style="padding:28px 40px 12px;font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:24px;color:#374151;">
+            <p style="margin:0 0 14px;">
+              The 4th edition of the <b>Communique Summit</b> was held on 31st August 2025 at Taj Palace, New Delhi.
+              With the theme of <b>&ldquo;India ka Future — 10 Saal Pragati ke Naam&rdquo;</b>, the summit was also a celebration
+              of our 10th anniversary &mdash; bringing together industry experts, policy makers, and worldwide leaders.
+            </p>
+            <p style="margin:0;">
+              The summit was livestreamed on Communique&rsquo;s website and partner channels including Economic Times, Mint,
+              Money Control, and News18. Through a combination of print media, livestreaming, and social media amplification,
+              the summit clocked an audience reach of <b style="color:#ff9900;">10.7&nbsp;MM</b>.
+            </p>
+          </td>
+        </tr>
+
+        <!-- ============ SECTION HEADING ============ -->
+        <tr>
+          <td style="padding:32px 40px 12px;font-family:Arial,Helvetica,sans-serif;">
+            <h2 style="margin:0;font-size:20px;line-height:26px;color:#1f2329;font-weight:700;">
+              Key sessions &mdash; click to watch
+            </h2>
+          </td>
+        </tr>
+
+        <!-- ============ VIDEO TILE 1: image with embedded play-icon, links to YouTube ============ -->
+        <tr>
+          <td style="padding:8px 40px;font-size:0;line-height:0;">
+            <a href="https://www.youtube.com/watch?v=YOUR_VIDEO_ID_1" target="_blank" style="display:block;text-decoration:none;">
+              <img class="responsive-img" src="https://picsum.photos/seed/video1/560/140" width="560" height="140" alt="Opening Remarks — watch on YouTube" style="display:block;width:100%;max-width:560px;height:auto;border:0;" />
+            </a>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:8px 40px;font-size:0;line-height:0;">
+            <a href="https://www.youtube.com/watch?v=YOUR_VIDEO_ID_2" target="_blank" style="display:block;text-decoration:none;">
+              <img class="responsive-img" src="https://picsum.photos/seed/video2/560/140" width="560" height="140" alt="A Decade of Transformation — watch on YouTube" style="display:block;width:100%;max-width:560px;height:auto;border:0;" />
+            </a>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:8px 40px;font-size:0;line-height:0;">
+            <a href="https://www.youtube.com/watch?v=YOUR_VIDEO_ID_3" target="_blank" style="display:block;text-decoration:none;">
+              <img class="responsive-img" src="https://picsum.photos/seed/video3/560/140" width="560" height="140" alt="Government Partnerships — watch on YouTube" style="display:block;width:100%;max-width:560px;height:auto;border:0;" />
+            </a>
+          </td>
+        </tr>
+
+        <!-- ============ BULLETPROOF CTA BUTTON (works in Outlook via VML) ============ -->
+        <tr>
+          <td align="center" style="padding:32px 40px;">
+            <!--[if mso]>
+            <v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="urn:schemas-microsoft-com:office:word" href="https://www.youtube.com/playlist?list=YOUR_PLAYLIST_ID" style="height:48px;v-text-anchor:middle;width:240px;" arcsize="13%" stroke="f" fillcolor="#ff9900">
+              <w:anchorlock/>
+              <center style="color:#ffffff;font-family:Arial,Helvetica,sans-serif;font-size:15px;font-weight:bold;">Watch All Sessions</center>
+            </v:roundrect>
+            <![endif]-->
+            <!--[if !mso]><!-- -->
+            <a href="https://www.youtube.com/playlist?list=YOUR_PLAYLIST_ID" target="_blank"
+               style="background-color:#ff9900;border-radius:6px;color:#ffffff;display:inline-block;font-family:Arial,Helvetica,sans-serif;font-size:15px;font-weight:bold;line-height:48px;text-align:center;text-decoration:none;width:240px;-webkit-text-size-adjust:none;">
+              Watch All Sessions
+            </a>
+            <!--<![endif]-->
+          </td>
+        </tr>
+
+        <!-- ============ COLLAGE: decorative image, not clickable ============ -->
+        <tr>
+          <td style="padding:16px 40px;font-size:0;line-height:0;">
+            <img class="responsive-img" src="https://picsum.photos/seed/collage/560/360" width="560" height="360" alt="Summit highlights" style="display:block;width:100%;max-width:560px;height:auto;border:0;" />
+          </td>
+        </tr>
+
+        <!-- ============ REACH BANNER: orange highlight (real HTML, no image needed) ============ -->
+        <tr>
+          <td align="center" style="padding:24px 40px;">
+            <table role="presentation" border="0" cellpadding="0" cellspacing="0">
+              <tr>
+                <td style="background-color:#ff9900;border-radius:4px;padding:10px 20px;font-family:Arial,Helvetica,sans-serif;font-size:16px;font-weight:700;color:#ffffff;">
+                  COMBINED REACH: 8.3 MM
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+
+        <!-- ============ TEAM GRID: 4 columns, each clickable ============ -->
+        <tr>
+          <td style="padding:32px 40px 8px;font-family:Arial,Helvetica,sans-serif;">
+            <h2 style="margin:0 0 16px;font-size:18px;color:#1f2329;font-weight:700;">The team that made it possible</h2>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:0 40px 24px;">
+            <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%">
+              <tr>
+                <td class="team-cell" align="center" valign="top" width="25%" style="padding:6px;">
+                  <a href="https://example.com/team/sridhar" target="_blank" style="text-decoration:none;color:#374151;">
+                    <img src="https://picsum.photos/seed/team1/120/120" width="120" height="120" alt="Sridhar" style="display:block;border-radius:60px;margin:0 auto;" />
+                    <p style="margin:8px 0 0;font-family:Arial,Helvetica,sans-serif;font-size:13px;font-weight:700;color:#1f2329;">Sridhar</p>
+                    <p style="margin:2px 0 0;font-family:Arial,Helvetica,sans-serif;font-size:11px;color:#6b7280;">Lead</p>
+                  </a>
+                </td>
+                <td class="team-cell" align="center" valign="top" width="25%" style="padding:6px;">
+                  <a href="https://example.com/team/abhijit" target="_blank" style="text-decoration:none;color:#374151;">
+                    <img src="https://picsum.photos/seed/team2/120/120" width="120" height="120" alt="Abhijit" style="display:block;border-radius:60px;margin:0 auto;" />
+                    <p style="margin:8px 0 0;font-family:Arial,Helvetica,sans-serif;font-size:13px;font-weight:700;color:#1f2329;">Abhijit</p>
+                    <p style="margin:2px 0 0;font-family:Arial,Helvetica,sans-serif;font-size:11px;color:#6b7280;">Production</p>
+                  </a>
+                </td>
+                <td class="team-cell" align="center" valign="top" width="25%" style="padding:6px;">
+                  <a href="https://example.com/team/dhruv" target="_blank" style="text-decoration:none;color:#374151;">
+                    <img src="https://picsum.photos/seed/team3/120/120" width="120" height="120" alt="Dhruv" style="display:block;border-radius:60px;margin:0 auto;" />
+                    <p style="margin:8px 0 0;font-family:Arial,Helvetica,sans-serif;font-size:13px;font-weight:700;color:#1f2329;">Dhruv</p>
+                    <p style="margin:2px 0 0;font-family:Arial,Helvetica,sans-serif;font-size:11px;color:#6b7280;">Digital</p>
+                  </a>
+                </td>
+                <td class="team-cell" align="center" valign="top" width="25%" style="padding:6px;">
+                  <a href="https://example.com/team/rishi" target="_blank" style="text-decoration:none;color:#374151;">
+                    <img src="https://picsum.photos/seed/team4/120/120" width="120" height="120" alt="Rishi" style="display:block;border-radius:60px;margin:0 auto;" />
+                    <p style="margin:8px 0 0;font-family:Arial,Helvetica,sans-serif;font-size:13px;font-weight:700;color:#1f2329;">Rishi</p>
+                    <p style="margin:2px 0 0;font-family:Arial,Helvetica,sans-serif;font-size:11px;color:#6b7280;">Comms</p>
+                  </a>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+
+        <!-- ============ FOOTER ============ -->
+        <tr>
+          <td style="background-color:#1f2329;padding:28px 40px;font-family:Arial,Helvetica,sans-serif;color:#9ca3af;font-size:12px;line-height:18px;">
+            <p style="margin:0 0 8px;color:#ffffff;font-size:14px;font-weight:700;">Communique Marketing Solutions Pvt Ltd</p>
+            <p style="margin:0 0 12px;">Events &middot; Conferences &middot; Experience Management</p>
+            <p style="margin:0 0 6px;">
+              <a href="https://example.com" target="_blank" style="color:#ff9900;">Website</a>
+              &nbsp;&middot;&nbsp;
+              <a href="https://linkedin.com/company/example" target="_blank" style="color:#ff9900;">LinkedIn</a>
+              &nbsp;&middot;&nbsp;
+              <a href="mailto:hello@communiqueindia.com" style="color:#ff9900;">hello@communiqueindia.com</a>
+            </p>
+            <p style="margin:12px 0 0;font-size:11px;color:#6b7280;">
+              You're receiving this because you opted in to Communique communications.
+              <a href="{{UnsubscribeURL}}" style="color:#9ca3af;text-decoration:underline;">Unsubscribe</a>
+              &middot;
+              <a href="{{ViewInBrowser}}" style="color:#9ca3af;text-decoration:underline;">View in browser</a>
+            </p>
+          </td>
+        </tr>
+
+      </table>
+      <!-- ============ /container ============ -->
+
+    </td>
+  </tr>
+</table>
+<!-- ============ /outer wrapper ============ -->
+
+</body>
+</html>

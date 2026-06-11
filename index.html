@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>EDM Builder — Image to Email HTML</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<header class="topbar">
+  <h1>EDM Builder <span class="tag">v0.8</span></h1>
+  <input type="text" id="projectNameInput" class="project-name-input" placeholder="Untitled project — click to name" />
+  <span id="saveIndicator" class="save-indicator"></span>
+  <div class="project-io">
+    <button id="saveProjectBtn" class="btn" title="Download project file to disk">Save project</button>
+    <label class="btn" title="Load a saved project file from disk">
+      Load project
+      <input type="file" id="loadProjectInput" accept=".json,.edm" hidden>
+    </label>
+  </div>
+  <div class="actions">
+    <label class="btn primary">
+      Upload image
+      <input type="file" id="fileInput" accept="image/*,.psd,.tif,.tiff" hidden>
+    </label>
+    <div class="dropdown">
+      <button id="exportForBtn" class="btn primary" disabled>Export for ▾</button>
+      <div class="dropdown-menu" id="exportMenu">
+        <button data-format="outlook"   class="dropdown-item"><span class="icon">📧</span> <div><b>Outlook (.eml)</b><span class="desc">Self-contained. Open → Forward → Send.</span></div></button>
+        <button data-format="oft"       class="dropdown-item"><span class="icon">📋</span> <div><b>Outlook Template (.oft)</b><span class="desc">Reusable template. Open → customise → send to anyone.</span></div></button>
+        <button data-format="mailchimp" class="dropdown-item"><span class="icon">📬</span> <div><b>Mailchimp</b><span class="desc">HTML + images.zip with merge tags. Paste in "Code your own".</span></div></button>
+        <button data-format="gmail"     class="dropdown-item"><span class="icon">📨</span> <div><b>Gmail</b><span class="desc">Download images + HTML, or copy as image.</span></div></button>
+        <button data-format="ses"       class="dropdown-item"><span class="icon">☁️</span> <div><b>AWS SES</b><span class="desc">HTML + JSON request body for SendEmail API.</span></div></button>
+        <button data-format="raw"       class="dropdown-item"><span class="icon">📄</span> <div><b>Raw HTML (.html)</b><span class="desc">Self-contained HTML with embedded images + links.</span></div></button>
+      </div>
+    </div>
+    <button id="previewBtn" class="btn" disabled>Preview</button>
+    <button id="clearBtn" class="btn ghost" disabled>Clear slices</button>
+  </div>
+</header>
+
+<div class="stepper" id="stepper">
+  <div class="step" data-step="1" id="step1">
+    <span class="step-num"><span>1</span></span>
+    <div class="step-text">
+      <b>Upload your EDM image</b>
+      <span class="step-hint">Click the orange "Upload image" button above, or drag onto the workspace. Supports PSD, PNG, JPG, TIFF, WebP, BMP, SVG.</span>
+    </div>
+  </div>
+  <div class="step-arrow">›</div>
+  <div class="step" data-step="2" id="step2">
+    <span class="step-num"><span>2</span></span>
+    <div class="step-text">
+      <b>Drag rectangles on the image</b>
+      <span class="step-hint">Press and hold the mouse, drag across a clickable area (a video tile, button, etc.), then release. Each rectangle becomes one clickable region.</span>
+    </div>
+  </div>
+  <div class="step-arrow">›</div>
+  <div class="step" data-step="3" id="step3">
+    <span class="step-num"><span>3</span></span>
+    <div class="step-text">
+      <b>Paste the link for each slice →</b>
+      <span class="step-hint">On the right sidebar, each slice has a "Link URL" input field. Paste the destination URL there (e.g. a YouTube link).</span>
+    </div>
+  </div>
+  <div class="step-arrow">›</div>
+  <div class="step" data-step="4" id="step4">
+    <span class="step-num"><span>4</span></span>
+    <div class="step-text">
+      <b>Export</b>
+      <span class="step-hint">Click "Export for ▾" → pick your platform → download.</span>
+    </div>
+  </div>
+</div>
+
+<main class="workspace">
+  <section class="canvas-area">
+    <div id="dropZone" class="drop-zone">
+      <p>Drop an EDM image here, or click <b>Upload image</b> above.</p>
+      <p class="hint">Supports PSD · PNG · JPG · TIFF · WebP · BMP · SVG — recommended width ≤ 640px for email.</p>
+    </div>
+    <div class="zoom-controls" id="zoomControls" style="display:none;">
+      <div class="tool-mode" id="toolMode">
+        <button class="tool-btn active" data-tool="draw" title="Draw slice rectangles (S)">✂ Slice</button>
+        <button class="tool-btn" data-tool="text" title="Click to place text label (T)">T Text</button>
+        <button class="tool-btn" data-tool="eyedropper" title="Pick color from image (I)">🎨 Pick</button>
+      </div>
+      <span class="tool-sep"></span>
+      <button class="zoom-btn" id="zoomOut" title="Zoom out (−)">−</button>
+      <span class="zoom-level" id="zoomLevel">100%</span>
+      <button class="zoom-btn" id="zoomIn" title="Zoom in (+)">+</button>
+      <button class="zoom-btn zoom-fit" id="zoomFit" title="Fit to width (0)">Fit</button>
+      <span class="cursor-coords" id="cursorCoords"></span>
+      <span class="picked-color" id="pickedColor" style="display:none;">
+        <span class="picked-swatch" id="pickedSwatch"></span>
+        <span id="pickedHex">#000000</span>
+      </span>
+      <span class="zoom-hint">Hold <kbd>Space</kbd> + drag to pan · <kbd>S</kbd> slice · <kbd>T</kbd> text · <kbd>I</kbd> pick · <kbd>Ctrl+Z</kbd> undo</span>
+    </div>
+    <div id="canvasScroll" class="canvas-scroll">
+      <div id="canvasWrap" class="canvas-wrap hidden">
+        <canvas id="canvas"></canvas>
+        <canvas id="overlay"></canvas>
+        <textarea id="inlineTextEdit" class="inline-text-edit" style="display:none;" placeholder="Type your text here…"></textarea>
+      </div>
+    </div>
+    <div id="magnifierWrap" class="magnifier-wrap" style="display:none;">
+      <canvas id="magnifier" width="150" height="150"></canvas>
+      <span class="mag-label" id="magLabel">5x</span>
+    </div>
+  </section>
+
+  <aside class="sidebar">
+    <h2>Slices <span id="sliceCount" class="muted">0</span></h2>
+    <p class="hint" id="howto">Click and drag on the image to draw a slice rectangle. Each slice becomes one clickable region in the final email.</p>
+    <ul id="sliceList" class="slice-list"></ul>
+
+    <div id="rowSummary" class="row-summary" style="display:none;">
+      <h3>Row grouping <span class="muted" style="font-weight:400;font-size:11px;">— how the exporter will arrange your slices</span></h3>
+      <ul id="rowSummaryList" class="row-summary-list"></ul>
+    </div>
+
+    <div id="exportSettings" class="export-settings" style="display:none;">
+      <h3>Export settings <span class="muted" style="font-weight:400;font-size:11px;">— width, format & quality</span></h3>
+
+      <div class="es-group">
+        <label class="es-label">Output width</label>
+        <div class="es-presets" id="esWidthPresets">
+          <button class="es-preset active" data-width="640">640px</button>
+          <button class="es-preset" data-width="600">600px</button>
+          <button class="es-preset" data-width="800">800px</button>
+          <button class="es-preset" data-width="original">Original</button>
+          <button class="es-preset" data-width="custom">Custom</button>
+        </div>
+        <div class="es-custom-row" id="esCustomRow" style="display:none;">
+          <input type="number" id="esCustomWidth" min="200" max="3000" value="700" class="es-custom-input" placeholder="Width" />
+          <span class="es-custom-x">x</span>
+          <input type="number" id="esCustomHeight" min="0" max="10000" value="" class="es-custom-input" placeholder="Auto" title="Leave blank for auto (proportional)" />
+          <span class="es-label-sm">px</span>
+        </div>
+        <div class="es-dim-info" id="esDimInfo"></div>
+      </div>
+
+      <div class="es-group">
+        <label class="es-label">Format</label>
+        <div class="es-fmt-toggle" id="esFmtToggle">
+          <button class="es-fmt active" data-fmt="png">PNG (lossless)</button>
+          <button class="es-fmt" data-fmt="jpeg">JPEG</button>
+        </div>
+        <div class="es-quality-row" id="esQualityRow" style="display:none;">
+          <label class="es-label-sm">Quality</label>
+          <input type="range" id="esQualitySlider" min="60" max="100" value="92" class="es-slider" />
+          <span id="esQualityVal" class="es-quality-val">92%</span>
+        </div>
+      </div>
+
+      <div class="es-group">
+        <label class="es-label">Output type</label>
+        <div class="es-output-toggle" id="esOutputToggle">
+          <button class="es-out active" data-out="html+images">HTML + Images</button>
+          <button class="es-out" data-out="images">Images only</button>
+          <button class="es-out" data-out="html">HTML only</button>
+        </div>
+      </div>
+
+
+
+      <div class="es-quality-badge" id="esQualityBadge" style="display:none;">
+        <span class="quality-dot" id="qualityDot"></span>
+        <span id="qualityLabel"></span>
+      </div>
+
+      <div class="es-group" style="margin-top:12px;padding-top:12px;border-top:1px solid #e0e3e8;">
+        <label class="es-label">Cloudinary CDN <span class="muted" style="font-weight:400;font-size:11px;">(auto-upload images)</span></label>
+        <div style="display:flex;gap:8px;align-items:center;">
+          <input type="text" id="esCloudName" placeholder="Cloud name" value="dbkflvrrg" style="flex:1;font-size:13px;padding:4px 8px;border:1px solid #d0d3d9;border-radius:4px;" />
+          <input type="text" id="esUploadPreset" placeholder="Upload preset" style="flex:1;font-size:13px;padding:4px 8px;border:1px solid #d0d3d9;border-radius:4px;" />
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;margin-top:6px;">
+          <label style="font-size:12px;display:flex;align-items:center;gap:4px;cursor:pointer;"><input type="checkbox" id="esCloudinaryEnabled"> Enable CDN upload on export</label>
+          <button class="btn ghost" id="esCloudinaryTest" style="font-size:11px;padding:2px 8px;">Test connection</button>
+        </div>
+        <span class="es-label-sm hint" style="margin-top:2px;">When enabled, export uploads images to Cloudinary CDN and generates email-ready HTML with CDN URLs. Create an <b>unsigned upload preset</b> in Cloudinary Settings → Upload.</span>
+      </div>
+    </div>
+
+    <div id="annotationsPanel" class="annotations-panel" style="display:none;">
+      <h3>Text labels <span id="annotCount" class="muted">0</span></h3>
+      <p class="hint" id="annotHowto">Switch to <b>T Text</b> mode in the toolbar above, then click anywhere on the image to place a label.</p>
+      <ul id="annotList" class="annot-list"></ul>
+    </div>
+
+    <div class="lint-panel">
+      <h3>Checks</h3>
+      <ul id="lintList" class="lint-list">
+        <li class="lint-ok">No image loaded.</li>
+      </ul>
+    </div>
+  </aside>
+</main>
+
+<div id="afterExportModal" class="modal hidden">
+  <div class="modal-inner" style="height:auto;max-height:80vh;max-width:640px;">
+    <header>
+      <h2 id="afterExportTitle">Export complete</h2>
+      <button class="btn ghost" id="closeAfterExport">Close</button>
+    </header>
+    <div id="afterExportBody" style="padding:24px;overflow-y:auto;font-family:Arial,Helvetica,sans-serif;font-size:14px;line-height:1.55;color:#1f2329;"></div>
+  </div>
+</div>
+
+<div id="previewModal" class="modal hidden">
+  <div class="modal-inner">
+    <header>
+      <h2>Email preview</h2>
+      <div>
+        <button class="btn ghost" id="closePreview">Close</button>
+      </div>
+    </header>
+    <div class="preview-tabs">
+      <button class="tab active" data-client="gmail">Gmail</button>
+      <button class="tab" data-client="outlook">Outlook (Windows)</button>
+      <button class="tab" data-client="apple">Apple Mail</button>
+      <button class="tab" data-client="source">{ } Source</button>
+      <div class="preview-real-test">
+        <button class="btn primary" id="sendRealTestBtn">Send real test ↗</button>
+      </div>
+    </div>
+    <div id="previewWarning" class="preview-warning">
+      <span class="warn-icon">⚠</span>
+      <div>
+        <b>Cosmetic preview only.</b> This pane shows a frame styled like each client — it does <b>not</b> simulate how that client actually strips CSS, alters tables, or wraps lines. For accurate pixel-by-pixel rendering, send yourself a real test (button above) or use
+        <a href="https://www.litmus.com/" target="_blank">Litmus</a> /
+        <a href="https://www.emailonacid.com/" target="_blank">Email on Acid</a>.
+      </div>
+    </div>
+    <iframe id="previewFrame" sandbox="allow-same-origin allow-popups allow-popups-to-escape-sandbox"></iframe>
+    <div id="sourceEditor" class="source-editor" style="display:none;">
+      <div class="source-toolbar">
+        <span class="source-hint">Edit the HTML below — changes only affect this download, not the saved project.</span>
+        <button class="btn" id="copySourceBtn">Copy HTML</button>
+        <button class="btn primary" id="downloadSourceBtn">Download .html</button>
+      </div>
+      <textarea id="sourceCode" class="source-code" spellcheck="false"></textarea>
+    </div>
+  </div>
+</div>
+
+<div id="decodeOverlay" class="decode-overlay hidden">
+  <div class="decode-spinner"></div>
+  <span class="decode-msg">Decoding…</span>
+  <span class="decode-sub">Loading format library — first time may take a moment</span>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+<script src="exporter.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
