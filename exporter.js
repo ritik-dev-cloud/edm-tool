@@ -7,8 +7,9 @@
 (function () {
   function getCellThumb(cell) {
     const href = cell.href || (cell._srcSlice && cell._srcSlice.href);
-    if (!href || !window.getThumbForSlice) return null;
-    return window.getThumbForSlice({ href });
+    const useThumb = cell.useThumb || (cell._srcSlice && cell._srcSlice.useThumb);
+    if (!href || !useThumb || !window.getThumbForSlice) return null;
+    return window.getThumbForSlice({ href, useThumb: true });
   }
 
   function escapeAttr(s) {

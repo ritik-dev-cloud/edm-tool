@@ -54,6 +54,7 @@ function fetchThumb(url, onReady) {
 
 function getThumbForSlice(slice) {
   if (!slice.href) return null;
+  if (!slice.useThumb) return null; // opt-in per slice — default keeps the original design art
   const thumbUrl = getVideoThumbUrl(slice.href);
   if (!thumbUrl) return null;
   const entry = thumbCache[thumbUrl];
@@ -382,8 +383,8 @@ projectNameInput.addEventListener('input', () => {
   scheduleSave();
 });
 
-// Clear any stale saved project on startup so we always begin fresh.
-clearSavedProject();
+// Note: the autosaved project is restored at boot (see bootRestore at the
+// bottom of this file). clearSavedProject() remains available for explicit resets.
 
 // ---- Zoom & pan ----
 const canvasScroll = document.getElementById('canvasScroll');
@@ -1568,6 +1569,10 @@ function renderSliceList() {
       ` : `
         <input type="url" class="slice-href" placeholder="Link URL (https://...) — leave empty for non-clickable" value="${escapeAttr(s.href)}" data-id="${s.id}">
         <input type="text" class="slice-alt" placeholder="Alt text — describes the image (for accessibility & image-blocked clients)" value="${escapeAttr(s.alt)}" data-id="${s.id}">
+        <label class="thumb-opt" data-id="${s.id}" style="display:${getVideoThumbUrl(s.href) ? 'flex' : 'none'};align-items:center;gap:6px;font-size:11px;color:#475569;margin-top:6px;cursor:pointer;">
+          <input type="checkbox" class="slice-usethumb" data-id="${s.id}" ${s.useThumb ? 'checked' : ''}>
+          🎬 Replace this area with the video's thumbnail (off = keep your design)
+        </label>
       `}
     `;
     sliceList.appendChild(li);
@@ -1579,7 +1584,20 @@ function renderSliceList() {
       if (slice) {
         slice.href = e.target.value.trim();
         fetchThumb(slice.href, () => redrawOverlay());
+        const lbl = sliceList.querySelector(`.thumb-opt[data-id="${slice.id}"]`);
+        if (lbl) lbl.style.display = getVideoThumbUrl(slice.href) ? 'flex' : 'none';
         runLint(); updateSteps(); scheduleSave(); redrawOverlay();
+      }
+    });
+  });
+  // Video thumbnail opt-in
+  sliceList.querySelectorAll('.slice-usethumb').forEach(cb => {
+    cb.addEventListener('change', e => {
+      const slice = state.slices.find(s => s.id == e.target.dataset.id);
+      if (slice) {
+        slice.useThumb = e.target.checked;
+        if (slice.useThumb) fetchThumb(slice.href, () => redrawOverlay());
+        redrawOverlay(); scheduleSave();
       }
     });
   });
@@ -2607,3 +2625,15 @@ document.getElementById('loadProjectInput').addEventListener('change', e => {
   };
   reader.readAsText(file);
 });
+
+// ---- Boot: restore the autosaved project from IndexedDB ----
+(async function bootRestore() {
+  try {
+    const saved = await loadSavedProject();
+    if (saved && saved.imageDataUrl && !state.image) {
+      restoreFromSaved(saved);
+    }
+  } catch (err) {
+    console.warn('Autosave restore failed:', err);
+  }
+})();
