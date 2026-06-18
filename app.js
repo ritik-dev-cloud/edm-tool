@@ -507,15 +507,24 @@ dropZone.addEventListener('drop', e => {
   if (e.dataTransfer.files[0]) loadFile(e.dataTransfer.files[0]);
 });
 
-// Brief, non-blocking notification toast (auto-dismisses).
+// Brief, non-blocking success notification toast (auto-dismisses).
 function showToast(msg, ms = 4500) {
   const t = document.createElement('div');
-  t.textContent = msg;
   t.style.cssText = 'position:fixed;left:50%;bottom:28px;transform:translateX(-50%);' +
-    'background:#0f172a;color:#fff;padding:12px 20px;border-radius:10px;' +
+    'display:flex;align-items:center;gap:11px;' +
+    'background:#ffffff;color:#0f172a;padding:13px 20px 13px 16px;border-radius:12px;' +
+    'border:1px solid #d1fadf;border-left:5px solid #10b981;' +
     'font:500 13px Inter,-apple-system,Segoe UI,Arial,sans-serif;' +
-    'box-shadow:0 8px 30px rgba(0,0,0,.32);z-index:9999;max-width:560px;' +
-    'text-align:center;opacity:0;transition:opacity .25s ease;';
+    'box-shadow:0 10px 34px rgba(16,185,129,.22);z-index:9999;max-width:560px;' +
+    'opacity:0;transition:opacity .25s ease;';
+  const icon = document.createElement('span');
+  icon.textContent = '✓';
+  icon.style.cssText = 'flex-shrink:0;width:24px;height:24px;border-radius:50%;' +
+    'background:#10b981;color:#fff;font-weight:700;font-size:14px;' +
+    'display:flex;align-items:center;justify-content:center;';
+  const text = document.createElement('span');
+  text.textContent = msg;
+  t.appendChild(icon); t.appendChild(text);
   document.body.appendChild(t);
   requestAnimationFrame(() => { t.style.opacity = '1'; });
   setTimeout(() => { t.style.opacity = '0'; setTimeout(() => t.remove(), 320); }, ms);
@@ -633,7 +642,7 @@ async function loadFile(file) {
     renderRowSummary();
     updateSteps();
     if (fit.scaled) {
-      showToast(`Large image optimized for editing: ${fit.from[0]}×${fit.from[1]} → ${fit.to[0]}×${fit.to[1]} px. Email-quality output is unaffected.`);
+      showToast(`Image loaded. Optimized for fast editing (${fit.from[0]}×${fit.from[1]} → ${fit.to[0]}×${fit.to[1]} px) — export quality is unaffected.`);
     }
   };
   img.src = dataUrl;
