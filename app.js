@@ -2262,6 +2262,9 @@ async function runExport(fmt) {
       await window.EDMExporter.exportMailchimp(state, eo);
       showAfterExport('mailchimp');
     } else if (fmt === 'gmail') {
+      // Copy-first flow: the "Copy newsletter" button uploads to CDN on demand.
+      // Skip the auto dual-HTML download so there's no file to accidentally attach.
+      cdnHandled = true;
       showAfterExport('gmail');
     } else if (fmt === 'ses') {
       const from    = prompt('SES From address (must be SES-verified):', 'no-reply@yourdomain.com');
@@ -2390,19 +2393,34 @@ function showAfterExport(fmt, result) {
         </p>`,
     },
     gmail: {
-      title: 'Gmail Export',
+      title: 'Send via Gmail — copy & paste, no file needed',
       body: `
-        <p style="margin:0 0 12px;">Choose how to send your email:</p>
-        <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
-          <button id="gmailDownloadEmlBtn" style="padding:10px 22px;background:#ea4335;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:14px;font-weight:600;">Download .eml (Recommended)</button>
-          <button id="gmailDownloadHtmlBtn" style="padding:10px 22px;background:#1a73e8;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:14px;font-weight:500;">Download .html</button>
-          <button id="gmailDownloadZipBtn" style="padding:10px 22px;background:#5f6368;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:13px;font-weight:500;">Download .zip</button>
+        <div style="margin:0 0 18px;padding:18px;background:#f0f4ff;border-radius:10px;border:1px solid #c5cfe0;text-align:center;">
+          <p style="margin:0 0 4px;font-weight:700;font-size:16px;">Step 1 — click to copy 👇</p>
+          <p style="margin:0 0 14px;font-size:12px;color:#5f6368;">This copies the whole newsletter. <b>Nothing is downloaded</b> — so there's no file to attach.</p>
+          <button id="gmailCopyInlineBtn" style="padding:13px 36px;font-size:16px;font-weight:700;background:#d93025;color:#fff;border:none;border-radius:9px;cursor:pointer;">📋 Copy newsletter</button>
+          <div style="margin:16px 0 0;text-align:left;font-size:13px;color:#333;background:#fff;border-radius:8px;padding:12px 14px;">
+            <b>Step 2 — paste into Gmail:</b>
+            <ol style="margin:6px 0 0;padding-left:20px;">
+              <li>Open Gmail → <b>Compose</b></li>
+              <li>Click inside the message body</li>
+              <li>Press <b>Ctrl+V</b> — the newsletter appears inline</li>
+              <li>Add your recipient → <b>Send</b></li>
+            </ol>
+          </div>
         </div>
-        <div style="margin-top:14px;font-size:13px;color:#555;">
-          <p style="margin:6px 0;"><b style="color:#ea4335;">Download .eml</b> — open in Outlook/Thunderbird → Forward → add recipients → Send. All images embedded, all links clickable. <b>Best option.</b></p>
-          <p style="margin:6px 0;"><b style="color:#1a73e8;">Download .html</b> — open in browser → Ctrl+A → Ctrl+C → paste into Gmail Compose. Images and links included.</p>
-          <p style="margin:6px 0;"><b style="color:#5f6368;">Download .zip</b> — separate image files + HTML. For CDN hosting / advanced use.</p>
-        </div>`,
+        <p style="margin:0;background:#fff4e0;padding:10px 12px;border-radius:6px;border-left:3px solid #f59e0b;font-size:12px;">
+          <b>Important:</b> do <b>not</b> download a file and attach it — that's what makes the images show up as attachments. Just <b>Copy → Paste</b>. The newsletter goes into the email body itself.
+        </p>
+        <details style="margin-top:12px;font-size:12px;color:#666;">
+          <summary style="cursor:pointer;">Advanced: download files instead</summary>
+          <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:10px;">
+            <button id="gmailDownloadEmlBtn" style="padding:8px 16px;background:#5f6368;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:12px;">Download .eml (Outlook only)</button>
+            <button id="gmailDownloadHtmlBtn" style="padding:8px 16px;background:#5f6368;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:12px;">Download .html</button>
+            <button id="gmailDownloadZipBtn" style="padding:8px 16px;background:#5f6368;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:12px;">Download .zip</button>
+          </div>
+          <p style="margin:8px 0 0;">The <b>.eml</b> is only for the Outlook desktop app (double-click → Forward → Send — never attach it). <b>.html</b>/<b>.zip</b> are for advanced/CDN use.</p>
+        </details>`,
     },
     ses: {
       title: 'AWS SES export — .zip downloaded',
@@ -2475,6 +2493,35 @@ function showAfterExport(fmt, result) {
     outlookCdnCopyBtn.addEventListener('click', () => {
       if (!_lastCdnGmailHtml) { alert('No HTML to copy.'); return; }
       copyHtmlToClipboard(_lastCdnGmailHtml, outlookCdnCopyBtn);
+    });
+  }
+
+  // Gmail copy-only path: build HTML and copy to clipboard, download nothing.
+  const gmailCopyInlineBtn = afterExportBody.querySelector('#gmailCopyInlineBtn');
+  if (gmailCopyInlineBtn) {
+    gmailCopyInlineBtn.addEventListener('click', async () => {
+      const eo = getExportSettings();
+      const origText = gmailCopyInlineBtn.textContent;
+      try {
+        let html;
+        if (eo.cloudinaryEnabled && eo.cloudName && eo.uploadPreset) {
+          gmailCopyInlineBtn.disabled = true;
+          gmailCopyInlineBtn.textContent = 'Uploading to CDN…';
+          const res = await window.EDMExporter.buildCdnGmailHtml(state, eo, eo.cloudName, eo.uploadPreset, (done, total) => {
+            gmailCopyInlineBtn.textContent = `Uploading ${done}/${total}…`;
+          });
+          html = res.html;
+        } else {
+          gmailCopyInlineBtn.textContent = 'Preparing…';
+          html = await window.EDMExporter.buildHTML(state, { embedImages: true, exportOpts: eo });
+        }
+        gmailCopyInlineBtn.disabled = false;
+        copyHtmlToClipboard(html, gmailCopyInlineBtn);
+      } catch (err) {
+        gmailCopyInlineBtn.disabled = false;
+        gmailCopyInlineBtn.textContent = origText;
+        alert('Copy failed: ' + err.message);
+      }
     });
   }
 

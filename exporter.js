@@ -1654,10 +1654,45 @@ table{border-collapse:collapse;border-spacing:0;mso-table-lspace:0pt;mso-table-r
     };
   }
 
+  // Upload slices to the CDN and RETURN the Gmail-ready HTML — downloads
+  // nothing. For the copy→paste-into-Gmail flow, where any downloaded file
+  // would just get attached by mistake.
+  async function buildCdnGmailHtml(state, exportOpts, cloudName, uploadPreset, onProgress) {
+    if (!state.image) throw new Error('No image loaded');
+    if (!cloudName || !uploadPreset) throw new Error('Cloudinary cloud name and upload preset are required.');
+    const eo = resolveExportOpts(state, exportOpts);
+    const scaledState = scaleState(state, eo.scale, eo.scaleY);
+    const base = (state.imageName || 'edm').replace(/[^a-zA-Z0-9_-]/g, '_');
+    const { cells, gridRows: _gridRows } = collectGridCells(state, scaledState, eo);
+    const cdnUrls = {};
+    const total = cells.length;
+    let step = 0;
+    for (const s of cells) {
+      step++;
+      if (onProgress) onProgress(step, total, 'CDN');
+      const origCell = { x: s._origX, y: s._origY, w: s._origW, h: s._origH };
+      const canvas = sliceToCanvas(state.image, origCell, Math.round(s.w), Math.round(s.h), state.annotations, getCellThumb(s));
+      const blob = await canvasToBlob(canvas, eo.mimeType, eo.quality);
+      const fname = `${base}_${String(step).padStart(2, '0')}${eo.ext}`;
+      const result = await uploadToCloudinary(blob, cloudName, uploadPreset, fname);
+      cdnUrls[cellKey(s)] = result.secure_url;
+      await new Promise(r => setTimeout(r, 0));
+    }
+    releaseSliceCanvas();
+    const html = buildHTMLDoc(scaledState, {
+      client: null,
+      defaultLink: eo.defaultLink,
+      bodyBgColor: eo.bodyBgColor,
+      gridRows: _gridRows,
+      imageSrc: s => cdnUrls[cellKey(s)] || '',
+    });
+    return { html, imageCount: cells.length, linkedSlices: state.slices.filter(s => s.href && s.type !== 'text').length };
+  }
+
   window.EDMExporter = {
     buildHTML, exportZip, exportEml, exportOft,
     exportMailchimp, exportGmailClipboard, exportSES, exportRawHtml,
     exportGmailImage, exportGmailHtml,
-    testCloudinary, exportCloudinary, exportEmlCloud,
+    testCloudinary, exportCloudinary, exportEmlCloud, buildCdnGmailHtml,
   };
 })();
