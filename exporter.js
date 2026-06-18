@@ -771,6 +771,11 @@ tableRows +
     return lines ? lines.join(CRLF) : '';
   }
 
+  // UTF-8 safe string → base64 (for MIME body parts).
+  function utf8ToBase64(str) {
+    return btoa(unescape(encodeURIComponent(str || '')));
+  }
+
   // RFC 2047 encoded-word for non-ASCII subject lines.
   function encodeHeader(s) {
     if (/^[\x00-\x7F]*$/.test(s)) return s;
@@ -1567,10 +1572,91 @@ table{border-collapse:collapse;border-spacing:0;mso-table-lspace:0pt;mso-table-r
     return { gmailHtml, outlookHtml, cdnUrl: fullImgUrl, imageCount: cells.length + 1, linkedSlices: linkedSlices.length };
   }
 
+  // CDN-backed .eml — references hosted Cloudinary images instead of embedding
+  // them, so the message has ZERO image attachments (Gmail won't show the slice
+  // pieces as attachment chips). Open in Outlook → Forward → Send as usual.
+  async function exportEmlCloud(state, opts, exportOpts, cloudName, uploadPreset, onProgress) {
+    if (!state.image) throw new Error('No image loaded');
+    if (!cloudName || !uploadPreset) throw new Error('Cloudinary cloud name and upload preset are required.');
+    opts = opts || {};
+    const eo = resolveExportOpts(state, exportOpts);
+    const scaledState = scaleState(state, eo.scale, eo.scaleY);
+    const from    = opts.from    || 'sender@example.com';
+    const to      = opts.to      || 'recipient@example.com';
+    const subject = opts.subject || (state.imageName || 'EDM') + ' campaign';
+    const base    = (state.imageName || 'edm').replace(/[^a-zA-Z0-9_-]/g, '_');
+
+    // Upload sliced grid cells to the CDN.
+    const { cells, gridRows: _gridRows } = collectGridCells(state, scaledState, eo);
+    const cdnUrls = {};
+    const total = cells.length;
+    let step = 0;
+    for (const s of cells) {
+      step++;
+      if (onProgress) onProgress(step, total, 'CDN');
+      const outCW = Math.round(s.w);
+      const outCH = Math.round(s.h);
+      const origCell = { x: s._origX, y: s._origY, w: s._origW, h: s._origH };
+      const canvas = sliceToCanvas(state.image, origCell, outCW, outCH, state.annotations, getCellThumb(s));
+      const blob = await canvasToBlob(canvas, eo.mimeType, eo.quality);
+      const fname = `${base}_${String(step).padStart(2, '0')}${eo.ext}`;
+      const result = await uploadToCloudinary(blob, cloudName, uploadPreset, fname);
+      cdnUrls[cellKey(s)] = result.secure_url;
+      await new Promise(r => setTimeout(r, 0));
+    }
+    releaseSliceCanvas();
+
+    // HTML that references CDN URLs — no embedded image parts.
+    const html = buildHTMLDoc(scaledState, {
+      client: null,
+      defaultLink: eo.defaultLink,
+      bodyBgColor: eo.bodyBgColor,
+      gridRows: _gridRows,
+      imageSrc: s => cdnUrls[cellKey(s)] || '',
+    });
+    const textPart = buildPlainText(state);
+
+    // Minimal multipart/alternative MIME — text + HTML only, no images, so the
+    // message carries no attachments at all.
+    const boundaryAlt = 'alt_' + randomBoundary();
+    let mime = '';
+    mime += `From: ${from}${CRLF}`;
+    mime += `To: ${to}${CRLF}`;
+    mime += `Subject: ${encodeHeader(subject)}${CRLF}`;
+    mime += `Date: ${rfc2822Date(new Date())}${CRLF}`;
+    mime += `MIME-Version: 1.0${CRLF}`;
+    mime += `Content-Type: multipart/alternative; boundary="${boundaryAlt}"${CRLF}`;
+    mime += CRLF;
+    mime += `This is a multipart MIME message. Your client should render it inline.${CRLF}`;
+    mime += CRLF;
+
+    mime += `--${boundaryAlt}${CRLF}`;
+    mime += `Content-Type: text/plain; charset="UTF-8"${CRLF}`;
+    mime += `Content-Transfer-Encoding: base64${CRLF}`;
+    mime += CRLF;
+    mime += wrap76(utf8ToBase64(textPart)) + CRLF;
+    mime += CRLF;
+
+    mime += `--${boundaryAlt}${CRLF}`;
+    mime += `Content-Type: text/html; charset="UTF-8"${CRLF}`;
+    mime += `Content-Transfer-Encoding: base64${CRLF}`;
+    mime += CRLF;
+    mime += wrap76(utf8ToBase64(html)) + CRLF;
+    mime += CRLF;
+
+    mime += `--${boundaryAlt}--${CRLF}`;
+
+    triggerDownload(new Blob([mime], { type: 'message/rfc822' }), `${base}.eml`);
+    return {
+      imageCount: cells.length,
+      linkedSlices: state.slices.filter(s => s.href && s.type !== 'text').length,
+    };
+  }
+
   window.EDMExporter = {
     buildHTML, exportZip, exportEml, exportOft,
     exportMailchimp, exportGmailClipboard, exportSES, exportRawHtml,
     exportGmailImage, exportGmailHtml,
-    testCloudinary, exportCloudinary,
+    testCloudinary, exportCloudinary, exportEmlCloud,
   };
 })();

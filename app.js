@@ -2236,6 +2236,8 @@ async function runExport(fmt) {
   }
   try {
     let result;
+    let cdnHandled = false;
+    const cdnReady = eo.cloudinaryEnabled && eo.cloudName && eo.uploadPreset;
     if (fmt === 'outlook') {
       const from    = prompt('From address (sender):', 'campaigns@communiqueindia.com');
       if (from === null) return;
@@ -2243,8 +2245,18 @@ async function runExport(fmt) {
       if (to === null) return;
       const subject = prompt('Subject line:', (state.imageName || 'EDM') + ' campaign');
       if (subject === null) return;
-      await window.EDMExporter.exportEml(state, { from, to, subject }, eo);
-      showAfterExport('outlook');
+      if (cdnReady) {
+        // CDN-backed .eml: hosted images, zero attachments.
+        exportForBtn.textContent = 'Uploading to CDN…';
+        const cloudRes = await window.EDMExporter.exportEmlCloud(state, { from, to, subject }, eo, eo.cloudName, eo.uploadPreset, (done, total) => {
+          exportForBtn.textContent = `CDN ${done}/${total}…`;
+        });
+        cdnHandled = true;
+        showAfterExport('outlook-cdn', cloudRes);
+      } else {
+        await window.EDMExporter.exportEml(state, { from, to, subject }, eo);
+        showAfterExport('outlook');
+      }
     } else if (fmt === 'mailchimp') {
       await window.EDMExporter.exportMailchimp(state, eo);
       showAfterExport('mailchimp');
@@ -2274,7 +2286,7 @@ async function runExport(fmt) {
       showAfterExport('raw');
     }
     // Cloudinary CDN dual export — Gmail (table) + Outlook/Apple (image map)
-    if (eo.cloudinaryEnabled && eo.cloudName && eo.uploadPreset) {
+    if (!cdnHandled && eo.cloudinaryEnabled && eo.cloudName && eo.uploadPreset) {
       exportForBtn.textContent = 'Uploading to CDN…';
       try {
         const cdnResult = await window.EDMExporter.exportCloudinary(state, eo, eo.cloudName, eo.uploadPreset, (done, total, phase) => {
@@ -2316,8 +2328,25 @@ function showAfterExport(fmt, result) {
           <li>Enter your real recipient(s) in the <b>To</b> field. Multiple recipients separated by <code>;</code>.</li>
           <li>Click <b>Send</b>.</li>
         </ol>
-        <p style="margin-top:14px;background:#fff8eb;padding:10px 12px;border-radius:6px;border-left:3px solid #ff9900;">
-          <b>Tip:</b> for &gt;200 recipients, use Outlook with BCC, or switch to the Mailchimp export instead.
+        <p style="margin-top:14px;background:#fff4e0;padding:10px 12px;border-radius:6px;border-left:3px solid #f59e0b;">
+          <b>Heads up:</b> images are <b>embedded</b>, so <b>Gmail recipients will see the slice pieces as attachment chips</b>.
+          To send with <b>zero attachments</b>, tick <b>“Enable CDN upload on export”</b> in Export settings, then export again — the .eml will load images from your CDN instead.
+        </p>`,
+    },
+    'outlook-cdn': {
+      title: 'Outlook export (CDN) — .eml downloaded, no attachments',
+      body: `
+        <div style="margin:0 0 14px;padding:12px 14px;background:#e7f8f1;border-radius:8px;border-left:4px solid #10b981;font-size:13px;">
+          ✓ Images are hosted on your Cloudinary CDN — this email has <b>no attachments</b>. Recipients on Gmail and Outlook see the full newsletter inline.
+        </div>
+        <ol style="padding-left:20px;margin:0;">
+          <li>Find the <b>.eml</b> file in your Downloads folder.</li>
+          <li><b>Double-click it</b> — opens in Outlook.</li>
+          <li>Click <b>Forward</b>, add your recipient(s) in <b>To</b> (separate multiple with <code>;</code>).</li>
+          <li>Click <b>Send</b>.</li>
+        </ol>
+        <p style="margin-top:14px;background:#eff6ff;padding:10px 12px;border-radius:6px;border-left:3px solid #3b82f6;font-size:12px;">
+          Images load from the web when the recipient opens the email (standard for marketing mail). Keep the CDN images in place — don't delete them from Cloudinary after sending.
         </p>`,
     },
     oft: {
