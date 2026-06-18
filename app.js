@@ -2252,6 +2252,7 @@ async function runExport(fmt) {
           exportForBtn.textContent = `CDN ${done}/${total}…`;
         });
         cdnHandled = true;
+        _lastCdnGmailHtml = cloudRes.gmailHtml || '';
         showAfterExport('outlook-cdn', cloudRes);
       } else {
         await window.EDMExporter.exportEml(state, { from, to, subject }, eo);
@@ -2334,19 +2335,27 @@ function showAfterExport(fmt, result) {
         </p>`,
     },
     'outlook-cdn': {
-      title: 'Outlook export (CDN) — .eml downloaded, no attachments',
+      title: 'Export ready — send it inline (no attachments)',
       body: `
-        <div style="margin:0 0 14px;padding:12px 14px;background:#e7f8f1;border-radius:8px;border-left:4px solid #10b981;font-size:13px;">
-          ✓ Images are hosted on your Cloudinary CDN — this email has <b>no attachments</b>. Recipients on Gmail and Outlook see the full newsletter inline.
+        <div style="margin:0 0 16px;padding:12px 14px;background:#e7f8f1;border-radius:8px;border-left:4px solid #10b981;font-size:13px;">
+          ✓ Images are hosted on your Cloudinary CDN — the newsletter shows <b>inline in the email body</b> with <b>no attachments</b>.
         </div>
-        <ol style="padding-left:20px;margin:0;">
-          <li>Find the <b>.eml</b> file in your Downloads folder.</li>
-          <li><b>Double-click it</b> — opens in Outlook.</li>
-          <li>Click <b>Forward</b>, add your recipient(s) in <b>To</b> (separate multiple with <code>;</code>).</li>
-          <li>Click <b>Send</b>.</li>
+
+        <div style="margin:0 0 18px;padding:16px;background:#f0f4ff;border-radius:8px;border:1px solid #c5cfe0;text-align:center;">
+          <p style="margin:0 0 4px;font-weight:700;font-size:15px;">Sending from Gmail? Do this 👇</p>
+          <p style="margin:0 0 12px;font-size:12px;color:#5f6368;">The easiest way — paste the newsletter straight into the email body.</p>
+          <button id="outlookCdnCopyBtn" style="padding:11px 30px;font-size:15px;font-weight:600;background:#d93025;color:#fff;border:none;border-radius:8px;cursor:pointer;">📋 Copy newsletter</button>
+          <p style="margin:12px 0 0;font-size:12px;color:#5f6368;">Then in Gmail: <b>Compose</b> → click in the body → <b>Ctrl+V</b> → add recipient → <b>Send</b>. The images and links appear inline.</p>
+        </div>
+
+        <p style="font-weight:600;margin:0 0 8px;font-size:13px;">Sending from Outlook (desktop) instead?</p>
+        <ol style="padding-left:20px;margin:0 0 14px;font-size:13px;">
+          <li><b>Double-click the .eml</b> in your Downloads — it opens as an email.</li>
+          <li>Click <b>Forward</b>, add recipient(s) in <b>To</b>, click <b>Send</b>.</li>
         </ol>
-        <p style="margin-top:14px;background:#eff6ff;padding:10px 12px;border-radius:6px;border-left:3px solid #3b82f6;font-size:12px;">
-          Images load from the web when the recipient opens the email (standard for marketing mail). Keep the CDN images in place — don't delete them from Cloudinary after sending.
+
+        <p style="margin:0;background:#fff4e0;padding:10px 12px;border-radius:6px;border-left:3px solid #f59e0b;font-size:12px;">
+          <b>Don't attach the .eml file to a new email</b> — if you do, the recipient just gets a file to download (what you saw before), not the newsletter. Use <b>Copy → Paste</b> (Gmail) or <b>open → Forward</b> (Outlook) instead. Images load from the web, so keep them on Cloudinary after sending.
         </p>`,
     },
     oft: {
@@ -2458,6 +2467,14 @@ function showAfterExport(fmt, result) {
     rawCopyBtn.addEventListener('click', () => {
       if (!_lastCdnGmailHtml) { alert('No HTML to copy.'); return; }
       copyHtmlToClipboard(_lastCdnGmailHtml, rawCopyBtn);
+    });
+  }
+
+  const outlookCdnCopyBtn = afterExportBody.querySelector('#outlookCdnCopyBtn');
+  if (outlookCdnCopyBtn) {
+    outlookCdnCopyBtn.addEventListener('click', () => {
+      if (!_lastCdnGmailHtml) { alert('No HTML to copy.'); return; }
+      copyHtmlToClipboard(_lastCdnGmailHtml, outlookCdnCopyBtn);
     });
   }
 

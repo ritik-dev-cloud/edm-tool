@@ -1650,6 +1650,7 @@ table{border-collapse:collapse;border-spacing:0;mso-table-lspace:0pt;mso-table-r
     return {
       imageCount: cells.length,
       linkedSlices: state.slices.filter(s => s.href && s.type !== 'text').length,
+      gmailHtml: html,
     };
   }
 
