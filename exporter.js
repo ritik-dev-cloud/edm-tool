@@ -332,7 +332,7 @@
     const h = Math.round(overrideW ? slice.h * (overrideW / slice.w) : slice.h);
     const altText = slice.alt || `Slice ${slice.id}`;
     const owaId = `OWATemporaryImageDivContainer_${++_imgCellId}`;
-    const img = `<img src="${escapeAttr(src)}" width="${w}" height="${h}" id="${owaId}" alt="${escapeAttr(altText)}" border="0" style="display:block;vertical-align:middle;border:0 none;outline:none;text-decoration:none;width:${w}px;height:${h}px;max-width:100%;line-height:0;font-size:0;-ms-interpolation-mode:bicubic;">`;
+    const img = `<img src="${escapeAttr(src)}" width="${w}" height="${h}" id="${owaId}" alt="${escapeAttr(altText)}" border="0" style="display:block;vertical-align:middle;border:0 none;outline:none;text-decoration:none;width:100%;max-width:${w}px;height:auto;line-height:0;font-size:0;-ms-interpolation-mode:bicubic;">`;
     const href = slice.href || defaultLink || '';
     const gmailAnchor = `<span style="color:transparent;font-size:0;line-height:0;display:none;mso-hide:all;">&nbsp;</span>`;
     if (href) {
@@ -420,7 +420,9 @@
       // tables or colspan needed, so Gmail can't break the layout.
       gridRows.forEach(row => {
         const rowH = Math.round(row[0].h);
-        const msoHeightFix = `line-height:${rowH}px;height:${rowH}px;`;
+        // Lock height only for thin spacer rows — content rows must stay fluid so
+        // images scale (height:auto) on mobile instead of stretching.
+        const msoHeightFix = rowH < 20 ? `line-height:${rowH}px;height:${rowH}px;` : '';
         if (row.length === 1) {
           const cell = row[0];
           if (cell.type === 'text' && !cell._isGap) {
@@ -428,9 +430,9 @@
             const hasBg = ts.bg && ts.bg !== 'transparent';
             const bgAttr = hasBg ? ` bgcolor="${ts.bg}"` : '';
             const bgStyle = hasBg ? `background-color:${ts.bg};` : '';
-            tableRows += `<tr style="line-height:0;font-size:0;padding:0;margin:0;border:0 none;"><td align="left" valign="top" width="${totalWidth}"${bgAttr} style="width:${totalWidth}px;height:${cell.h}px;${bgStyle}padding:0;margin:0;border:0 none;overflow:hidden;mso-line-height-rule:exactly;${msoHeightFix}">${textCellContent(cell)}</td></tr>`;
+            tableRows += `<tr style="line-height:0;font-size:0;padding:0;margin:0;border:0 none;"><td align="left" valign="top" width="${totalWidth}"${bgAttr} style="width:100%;max-width:${totalWidth}px;${bgStyle}padding:0;margin:0;border:0 none;overflow:hidden;mso-line-height-rule:exactly;${msoHeightFix}">${textCellContent(cell)}</td></tr>`;
           } else {
-            tableRows += `<tr style="line-height:0;font-size:0;padding:0;margin:0;border:0 none;"><td align="left" valign="top" width="${totalWidth}" style="width:${totalWidth}px;padding:0;margin:0;border:0 none;font-size:0;line-height:0;overflow:hidden;mso-line-height-rule:exactly;${msoHeightFix}">${imgCell(cell, opts.imageSrc(cell), totalWidth, defLink)}</td></tr>`;
+            tableRows += `<tr style="line-height:0;font-size:0;padding:0;margin:0;border:0 none;"><td align="left" valign="top" width="${totalWidth}" style="width:100%;max-width:${totalWidth}px;padding:0;margin:0;border:0 none;font-size:0;line-height:0;overflow:hidden;mso-line-height-rule:exactly;${msoHeightFix}">${imgCell(cell, opts.imageSrc(cell), totalWidth, defLink)}</td></tr>`;
           }
         } else {
           const widths = row.map(c => Math.round(c.w));
@@ -441,18 +443,19 @@
           let innerTds = '';
           row.forEach((cell, i) => {
             const w = widths[i];
+            const pct = (w / totalWidth * 100).toFixed(4); // % width so columns scale on mobile
             if (cell.type === 'text' && !cell._isGap) {
               const ts = cell.textStyle || {};
               const hasBg = ts.bg && ts.bg !== 'transparent';
               const bgAttr = hasBg ? ` bgcolor="${ts.bg}"` : '';
               const bgStyle = hasBg ? `background-color:${ts.bg};` : '';
-              innerTds += `<td align="left" valign="top" width="${w}"${bgAttr} style="width:${w}px;height:${cell.h}px;${bgStyle}padding:0;margin:0;border:0 none;overflow:hidden;mso-line-height-rule:exactly;${msoHeightFix}">${textCellContent(cell)}</td>`;
+              innerTds += `<td align="left" valign="top" width="${w}"${bgAttr} style="width:${pct}%;${bgStyle}padding:0;margin:0;border:0 none;overflow:hidden;mso-line-height-rule:exactly;">${textCellContent(cell)}</td>`;
             } else {
-              innerTds += `<td align="left" valign="top" width="${w}" style="width:${w}px;padding:0;margin:0;border:0 none;font-size:0;line-height:0;overflow:hidden;mso-line-height-rule:exactly;${msoHeightFix}">${imgCell(cell, opts.imageSrc(cell), w, defLink)}</td>`;
+              innerTds += `<td align="left" valign="top" width="${w}" style="width:${pct}%;padding:0;margin:0;border:0 none;font-size:0;line-height:0;overflow:hidden;mso-line-height-rule:exactly;">${imgCell(cell, opts.imageSrc(cell), w, defLink)}</td>`;
             }
           });
-          tableRows += `<tr style="line-height:0;font-size:0;padding:0;margin:0;border:0 none;"><td align="left" valign="top" width="${totalWidth}" style="width:${totalWidth}px;padding:0;margin:0;border:0 none;font-size:0;line-height:0;overflow:hidden;mso-line-height-rule:exactly;${msoHeightFix}">` +
-            `<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="${totalWidth}" style="border-collapse:collapse;border-spacing:0;mso-table-lspace:0pt;mso-table-rspace:0pt;font-size:0;line-height:0;width:${totalWidth}px;table-layout:fixed;">` +
+          tableRows += `<tr style="line-height:0;font-size:0;padding:0;margin:0;border:0 none;"><td align="left" valign="top" width="${totalWidth}" style="width:100%;max-width:${totalWidth}px;padding:0;margin:0;border:0 none;font-size:0;line-height:0;overflow:hidden;mso-line-height-rule:exactly;">` +
+            `<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="${totalWidth}" style="border-collapse:collapse;border-spacing:0;mso-table-lspace:0pt;mso-table-rspace:0pt;font-size:0;line-height:0;width:100%;max-width:${totalWidth}px;table-layout:fixed;">` +
             `<tr style="line-height:0;font-size:0;padding:0;margin:0;border:0 none;">${innerTds}</tr></table></td></tr>`;
         }
       });
@@ -502,8 +505,8 @@
 `${previewChrome.wrapStart}` +
 `${wrapOpen}` +
 `<!--[if mso]><table role="presentation" align="center" cellpadding="0" cellspacing="0" border="0" width="${totalWidth}"><tr><td><![endif]-->` +
-`<div style="max-width:${totalWidth}px;width:${totalWidth}px;margin:0 auto;overflow:hidden;font-size:0;line-height:0;">` +
-`<table role="presentation" class="email-table" align="center" cellpadding="0" cellspacing="0" border="0" width="${totalWidth}" style="border-collapse:collapse;border-spacing:0;margin:0 auto;border:0 none;table-layout:fixed;width:${totalWidth}px;max-width:${totalWidth}px;mso-table-lspace:0pt;mso-table-rspace:0pt;font-size:0;line-height:0;">` +
+`<div style="max-width:${totalWidth}px;width:100%;margin:0 auto;overflow:hidden;font-size:0;line-height:0;">` +
+`<table role="presentation" class="email-table" align="center" cellpadding="0" cellspacing="0" border="0" width="${totalWidth}" style="border-collapse:collapse;border-spacing:0;margin:0 auto;border:0 none;table-layout:fixed;width:100%;max-width:${totalWidth}px;mso-table-lspace:0pt;mso-table-rspace:0pt;font-size:0;line-height:0;">` +
 tableRows +
 `</table>` +
 `</div>` +
