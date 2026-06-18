@@ -560,6 +560,9 @@ async function loadFile(file) {
     alert('Unsupported file format.\n\nSupported: PSD, PNG, JPG, TIFF, WebP, BMP, GIF, SVG.');
     return;
   }
+  // Uploading a new image supersedes any pending "restore previous project" offer.
+  const rb = document.getElementById('restoreBanner');
+  if (rb) rb.remove();
 
   state.imageName = file.name.replace(/\.[^.]+$/, '').replace(/[^a-z0-9_-]/gi, '_') || 'edm';
   let dataUrl;
@@ -2676,14 +2679,36 @@ document.getElementById('loadProjectInput').addEventListener('change', e => {
   reader.readAsText(file);
 });
 
-// ---- Boot: restore the autosaved project from IndexedDB ----
+// ---- Boot: offer to restore the autosaved project (don't auto-load it) ----
+// Default to a clean slate so reopening the app is always ready for a new
+// upload; surface a banner so a previous session can still be recovered.
+function showRestoreBanner(saved) {
+  const when = saved.savedAt ? new Date(saved.savedAt).toLocaleString() : 'earlier';
+  const name = saved.projectName || saved.imageName || 'Untitled project';
+  const slices = (saved.slices || []).length;
+  const bar = document.createElement('div');
+  bar.id = 'restoreBanner';
+  bar.style.cssText = 'position:fixed;top:74px;left:50%;transform:translateX(-50%);' +
+    'display:flex;align-items:center;gap:14px;background:#0f172a;color:#fff;' +
+    'padding:12px 16px;border-radius:12px;box-shadow:0 12px 36px rgba(0,0,0,.34);' +
+    'z-index:9998;font:500 13px Inter,-apple-system,Segoe UI,Arial,sans-serif;max-width:90vw;';
+  bar.innerHTML =
+    '<span>↩ Restore your previous project <b>' + escapeHtml(name) + '</b> (' +
+    slices + ' slice' + (slices === 1 ? '' : 's') + ', saved ' + escapeHtml(when) + ')?</span>' +
+    '<button id="restoreYes" style="background:linear-gradient(135deg,#ffb338,#ff8a00);color:#fff;border:none;padding:8px 16px;border-radius:8px;font-weight:600;cursor:pointer;font-family:inherit;">Restore</button>' +
+    '<button id="restoreNo" style="background:rgba(255,255,255,.12);color:#fff;border:none;padding:8px 16px;border-radius:8px;cursor:pointer;font-family:inherit;">Start new</button>';
+  document.body.appendChild(bar);
+  document.getElementById('restoreYes').onclick = () => { bar.remove(); restoreFromSaved(saved); };
+  document.getElementById('restoreNo').onclick = () => { bar.remove(); clearSavedProject(); };
+}
+
 (async function bootRestore() {
   try {
     const saved = await loadSavedProject();
     if (saved && saved.imageDataUrl && !state.image) {
-      restoreFromSaved(saved);
+      showRestoreBanner(saved);
     }
   } catch (err) {
-    console.warn('Autosave restore failed:', err);
+    console.warn('Autosave restore check failed:', err);
   }
 })();
