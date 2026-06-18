@@ -507,6 +507,53 @@ dropZone.addEventListener('drop', e => {
   if (e.dataTransfer.files[0]) loadFile(e.dataTransfer.files[0]);
 });
 
+// Brief, non-blocking notification toast (auto-dismisses).
+function showToast(msg, ms = 4500) {
+  const t = document.createElement('div');
+  t.textContent = msg;
+  t.style.cssText = 'position:fixed;left:50%;bottom:28px;transform:translateX(-50%);' +
+    'background:#0f172a;color:#fff;padding:12px 20px;border-radius:10px;' +
+    'font:500 13px Inter,-apple-system,Segoe UI,Arial,sans-serif;' +
+    'box-shadow:0 8px 30px rgba(0,0,0,.32);z-index:9999;max-width:560px;' +
+    'text-align:center;opacity:0;transition:opacity .25s ease;';
+  document.body.appendChild(t);
+  requestAnimationFrame(() => { t.style.opacity = '1'; });
+  setTimeout(() => { t.style.opacity = '0'; setTimeout(() => t.remove(), 320); }, ms);
+}
+
+// Auto-downscale oversized images on import so the editor stays responsive and
+// exports don't fail. Email output is ≤800px wide, so a working copy capped at
+// ~1500px wide preserves full visual quality. Returns the originals untouched
+// for normal-sized images. Draws directly to the target-size canvas, so no
+// giant intermediate canvas is ever allocated.
+function downscaleIfHuge(img, dataUrl) {
+  const w = img.naturalWidth, h = img.naturalHeight;
+  const MAX_W = 1500, MAX_H = 10000, MAX_AREA = 16000000;
+  const scale = Math.min(1, MAX_W / w, MAX_H / h, Math.sqrt(MAX_AREA / (w * h)));
+  if (!(scale < 1)) return Promise.resolve({ image: img, dataUrl, scaled: false });
+
+  const tw = Math.max(1, Math.round(w * scale));
+  const th = Math.max(1, Math.round(h * scale));
+  const c = document.createElement('canvas');
+  c.width = tw; c.height = th;
+  const cx = c.getContext('2d');
+  cx.imageSmoothingEnabled = true;
+  cx.imageSmoothingQuality = 'high';
+  // Keep alpha for formats that support it; matte others on white so a JPEG
+  // re-encode never turns transparent areas black.
+  const keepsAlpha = /^data:image\/(png|webp|gif)/i.test(dataUrl || '');
+  if (!keepsAlpha) { cx.fillStyle = '#ffffff'; cx.fillRect(0, 0, tw, th); }
+  cx.drawImage(img, 0, 0, w, h, 0, 0, tw, th);
+  const outUrl = keepsAlpha ? c.toDataURL('image/png') : c.toDataURL('image/jpeg', 0.92);
+
+  return new Promise((resolve) => {
+    const ni = new Image();
+    ni.onload = () => resolve({ image: ni, dataUrl: outUrl, scaled: true, from: [w, h], to: [tw, th] });
+    ni.onerror = () => resolve({ image: img, dataUrl, scaled: false }); // fall back to original
+    ni.src = outUrl;
+  });
+}
+
 async function loadFile(file) {
   const fmt = getFileFormat(file);
   if (!fmt) {
@@ -547,18 +594,18 @@ async function loadFile(file) {
   img.onerror = () => {
     alert('Failed to load image — the file may be corrupted or unsupported.');
   };
-  img.onload = () => {
-    // Warn if image is extremely large (canvas memory risk)
-    if (img.naturalWidth * img.naturalHeight > 25000000) {
-      if (!confirm(`This image is ${img.naturalWidth}×${img.naturalHeight} (${Math.round(img.naturalWidth * img.naturalHeight / 1000000)}MP) — very large images may slow down the editor or fail to export. Continue anyway?`)) return;
-    }
-    state.image = img;
-    state.imageDataUrl = dataUrl;
+  img.onload = async () => {
+    // Auto-downscale very large images so the editor stays responsive and
+    // exports don't fail. No-op for normal-sized images.
+    const fit = await downscaleIfHuge(img, dataUrl);
+    const baseImg = fit.image;
+    state.image = baseImg;
+    state.imageDataUrl = fit.dataUrl;
     state.slices = [];
     state.nextId = 1;
-    canvas.width = overlay.width = img.naturalWidth;
-    canvas.height = overlay.height = img.naturalHeight;
-    ctx.drawImage(img, 0, 0);
+    canvas.width = overlay.width = baseImg.naturalWidth;
+    canvas.height = overlay.height = baseImg.naturalHeight;
+    ctx.drawImage(baseImg, 0, 0);
     dropZone.classList.add('hidden') || (dropZone.style.display = 'none');
     canvasWrap.classList.remove('hidden');
     exportForBtn.disabled = false;
@@ -582,6 +629,9 @@ async function loadFile(file) {
     runLint();
     renderRowSummary();
     updateSteps();
+    if (fit.scaled) {
+      showToast(`Large image optimized for editing: ${fit.from[0]}×${fit.from[1]} → ${fit.to[0]}×${fit.to[1]} px. Email-quality output is unaffected.`);
+    }
   };
   img.src = dataUrl;
 }
