@@ -417,6 +417,18 @@
     } else {
       const gridRows = opts.gridRows || buildAutoGrid(state.slices, totalWidth, totalHeight);
 
+      // Shared column grid: collect every cell's horizontal edges into ONE set of
+      // boundary percentages, then size each cell from those shared boundaries.
+      // This guarantees columns line up across all rows — without it, each row
+      // computes its own widths and rounding drifts, which misaligns cells once
+      // a client scales the email down on mobile.
+      const _xset = new Set([0, totalWidth]);
+      gridRows.forEach(row => row.forEach(c => { _xset.add(c.x); _xset.add(c.x + c.w); }));
+      const _pctMap = new Map();
+      [..._xset].forEach(x => _pctMap.set(x, (x / totalWidth * 100)));
+      const xPct = (x) => _pctMap.has(x) ? _pctMap.get(x) : (x / totalWidth * 100);
+      const cellPct = (c) => (xPct(c.x + c.w) - xPct(c.x)).toFixed(4);
+
       // Each grid row becomes one <tr> in the outer single-column table.
       // Single-cell rows use a direct <td> with display:block img.
       // Multi-cell rows pack inline-block images into one <td> — no nested
@@ -438,15 +450,10 @@
             tableRows += `<tr style="line-height:0;font-size:0;padding:0;margin:0;border:0 none;"><td align="left" valign="top" width="${totalWidth}" style="width:100%;max-width:${totalWidth}px;padding:0;margin:0;border:0 none;font-size:0;line-height:0;overflow:hidden;mso-line-height-rule:exactly;${msoHeightFix}">${imgCell(cell, opts.imageSrc(cell), totalWidth, defLink)}</td></tr>`;
           }
         } else {
-          const widths = row.map(c => Math.round(c.w));
-          const sum = widths.reduce((a, b) => a + b, 0);
-          if (sum !== totalWidth && widths.length > 0) {
-            widths[widths.length - 1] += (totalWidth - sum);
-          }
           let innerTds = '';
           row.forEach((cell, i) => {
-            const w = widths[i];
-            const pct = (w / totalWidth * 100).toFixed(4); // % so columns scale together on mobile
+            const w = Math.round(cell.w);
+            const pct = cellPct(cell); // shared-boundary % so columns align across rows
             if (cell.type === 'text' && !cell._isGap) {
               const ts = cell.textStyle || {};
               const hasBg = ts.bg && ts.bg !== 'transparent';
