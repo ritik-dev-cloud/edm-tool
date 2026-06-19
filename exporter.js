@@ -1260,13 +1260,21 @@ tableRows +
     }
 
     if (eo.outputType !== 'html') {
-      // Normal mode: embed images as base64 data URLs
+      // Normal mode: embed images as base64 data URLs.
+      // Retina: render each canvas at up to 2x its display size for sharpness on
+      // hi-dpi/4K screens, while the HTML width/max-width stay 1x (display px).
+      // Clamp the factor to the available source pixels so we never upscale past
+      // the original image (origCell.w is the source-pixel width of the cell).
+      const RETINA = 2;
       for (const s of cells) {
         try {
           const outW = Math.round(s.w);
           const outH = Math.round(s.h);
           const origCell = { x: s._origX, y: s._origY, w: s._origW, h: s._origH };
-          const c = sliceToCanvas(state.image, origCell, outW, outH, state.annotations, getCellThumb(s));
+          const factor = outW ? Math.max(1, Math.min(RETINA, origCell.w / outW)) : RETINA;
+          const retW = Math.round(outW * factor);
+          const retH = Math.round(outH * factor);
+          const c = sliceToCanvas(state.image, origCell, retW, retH, state.annotations, getCellThumb(s));
           const dataUrl = c.toDataURL(eo.mimeType, eo.quality);
           dataURLs[cellKey(s)] = (dataUrl && dataUrl.length > 50) ? dataUrl : '';
         } catch (err) {
@@ -1750,7 +1758,13 @@ ${linksHtml}
     const outW = Math.round(natW * eo.scale), outH = Math.round(natH * eo.scaleY);
 
     // Render the whole design as ONE image (annotations baked in).
-    const canvas = sliceToCanvas(state.image, { x: 0, y: 0, w: natW, h: natH }, outW, outH, state.annotations);
+    // Retina: render the canvas at up to 2x the display width for sharpness on
+    // hi-dpi/4K screens; the <img> width/max-width stay at outW (display px).
+    // Clamp to the source so we never upscale past the original (natW pixels).
+    const RETINA = 2;
+    const factor = outW ? Math.max(1, Math.min(RETINA, natW / outW)) : RETINA;
+    const retW = Math.round(outW * factor), retH = Math.round(outH * factor);
+    const canvas = sliceToCanvas(state.image, { x: 0, y: 0, w: natW, h: natH }, retW, retH, state.annotations);
     let imgUrl;
     if (opts.cloudName && opts.uploadPreset) {
       const blob = await canvasToBlob(canvas, eo.mimeType, eo.quality);
