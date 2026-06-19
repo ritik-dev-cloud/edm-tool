@@ -6,12 +6,12 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="styles.css?v=0.9.6">
+<link rel="stylesheet" href="styles.css?v=0.9.7">
 </head>
 <body>
 
 <header class="topbar">
-  <h1><span>EDM Builder<span class="brand-sub">Communique · Email Design Studio</span></span> <span class="tag">v0.9.6</span></h1>
+  <h1><span>EDM Builder<span class="brand-sub">Communique · Email Design Studio</span></span> <span class="tag">v0.9.7</span></h1>
   <input type="text" id="projectNameInput" class="project-name-input" placeholder="Untitled project — click to name" />
   <span id="saveIndicator" class="save-indicator"></span>
   <div class="project-io">
@@ -158,6 +158,8 @@
     <div id="exportSettings" class="export-settings" style="display:none;">
       <h3>Export settings <span class="muted" style="font-weight:400;font-size:11px;">— width, format & quality</span></h3>
 
+      <div class="es-group"><label class="es-label">Inbox preview text <span class="muted" style="font-weight:400;font-size:11px;">(snippet shown in inbox)</span></label><input type="text" id="esPreheader" class="es-default-link" placeholder="e.g. MIX 2026 highlights — watch the films inside" /></div>
+
       <div class="es-group">
         <label class="es-label">Output width</label>
         <div class="es-presets" id="esWidthPresets">
@@ -288,8 +290,8 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
-<script src="exporter.js?v=0.9.6"></script>
-<script src="app.js?v=0.9.6"></script>
+<script src="exporter.js?v=0.9.7"></script>
+<script src="app.js?v=0.9.7"></script>
 <script>
 /* Dashboard stat cards — mirrors live values from the app UI */
 (function () {

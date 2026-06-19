@@ -164,7 +164,8 @@
     const outputType = exportOpts.outputType || 'html+images';
     const defaultLink = exportOpts.defaultLink || '';
     const bodyBgColor = exportOpts.bodyBgColor || '';
-    return { scale, scaleY, fmt, mimeType, quality, ext, outputType, defaultLink, bodyBgColor };
+    const preheader = exportOpts.preheader || '';
+    return { scale, scaleY, fmt, mimeType, quality, ext, outputType, defaultLink, bodyBgColor, preheader };
   }
 
   function canvasToBlob(canvas, type, quality) {
@@ -244,6 +245,7 @@
           w: Math.round(cellW), h: Math.round(cellH),
           href: match ? match.href : '',
           alt: match ? match.alt : '',
+          decorative: match ? !!match.decorative : false,
           type: effectiveType,
           text: match ? match.text : '',
           textStyle: match ? match.textStyle : null,
@@ -330,7 +332,7 @@
   function imgCell(slice, src, overrideW, defaultLink) {
     const w = Math.round(overrideW || slice.w);
     const h = Math.round(overrideW ? slice.h * (overrideW / slice.w) : slice.h);
-    const altText = slice.alt || `Slice ${slice.id}`;
+    const altText = (slice.decorative ? '' : ((slice.alt && slice.alt.trim()) ? slice.alt.trim() : ''));
     const owaId = `OWATemporaryImageDivContainer_${++_imgCellId}`;
     // No height ATTRIBUTE on purpose: a fixed height attribute + fluid width is
     // exactly what makes Outlook mobile stretch images. With only width + CSS
@@ -349,7 +351,7 @@
   function imgCellInline(slice, src, overrideW, defaultLink) {
     const w = overrideW || slice.w;
     const h = overrideW ? Math.round(slice.h * (overrideW / slice.w)) : slice.h;
-    const altText = slice.alt || `Slice ${slice.id}`;
+    const altText = (slice.decorative ? '' : ((slice.alt && slice.alt.trim()) ? slice.alt.trim() : ''));
     const img = `<img src="${escapeAttr(src)}" width="${w}" height="${h}" alt="${escapeAttr(altText)}" border="0" style="display:inline-block;vertical-align:middle;border:0 none;outline:none;text-decoration:none;width:${w}px;height:${h}px;max-width:${w}px;line-height:0;font-size:0;-ms-interpolation-mode:bicubic;">`;
     const href = slice.href || defaultLink || '';
     const gmailAnchor = `<span style="color:transparent;font-size:0;line-height:0;display:none;mso-hide:all;">&nbsp;</span>`;
@@ -512,6 +514,7 @@
 </style>
 </head>
 <body class="body" style="margin:0;padding:0;${bodyBgStyle}">` +
+(opts.preheader ? `<div style="display:none;max-height:0;overflow:hidden;mso-hide:all;font-size:1px;line-height:1px;color:#ffffff;opacity:0;">${escapeHtml(opts.preheader)}</div><div style="display:none;max-height:0;overflow:hidden;mso-hide:all;">&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;</div>` : '') +
 `${previewChrome.wrapStart}` +
 `${wrapOpen}` +
 `<!--[if mso]><table role="presentation" align="center" cellpadding="0" cellspacing="0" border="0" width="${totalWidth}"><tr><td><![endif]-->` +
@@ -613,6 +616,7 @@ tableRows +
       client: opts.client,
       defaultLink: eo.defaultLink,
       bodyBgColor: eo.bodyBgColor,
+      preheader: eo.preheader,
       imageSrc: s => dataURLs[cellKey(s)] || '',
       gridRows: gridRows,
     });
@@ -643,6 +647,7 @@ tableRows +
         seen.add(key);
         cells.push({
           ...cell,
+          decorative: cell._srcSlice ? !!cell._srcSlice.decorative : !!cell.decorative,
           _origX: cell.x / eo.scale, _origY: cell.y / sy,
           _origW: cell.w / eo.scale, _origH: cell.h / sy,
         });
@@ -696,6 +701,7 @@ tableRows +
         client: null,
         defaultLink: eo.defaultLink,
         bodyBgColor: eo.bodyBgColor,
+        preheader: eo.preheader,
         imageSrc: s => filenames[cellKey(s)] ? `images/${filenames[cellKey(s)]}` : '',
         gridRows: _gridRows,
       });
@@ -852,6 +858,7 @@ tableRows +
       client: null,
       defaultLink: eo.defaultLink,
       bodyBgColor: eo.bodyBgColor,
+      preheader: eo.preheader,
       gridRows: _gridRows,
       imageSrc: s => `cid:${cidMap[cellKey(s)]}`,
     });
@@ -978,7 +985,7 @@ tableRows +
     if (eo.outputType !== 'images') {
       // HTML with placeholder *|MC:IMAGE|* style URLs the user replaces after upload
       const mcWidth = scaledState.image ? scaledState.image.naturalWidth : 640;
-      let html = buildHTMLDoc(scaledState, { client: null, defaultLink: eo.defaultLink, bodyBgColor: eo.bodyBgColor, gridRows: _gridRows, imageSrc: s => filenames[cellKey(s)] ? `images/${filenames[cellKey(s)]}` : '' });
+      let html = buildHTMLDoc(scaledState, { client: null, defaultLink: eo.defaultLink, bodyBgColor: eo.bodyBgColor, preheader: eo.preheader, gridRows: _gridRows, imageSrc: s => filenames[cellKey(s)] ? `images/${filenames[cellKey(s)]}` : '' });
 
       // Inject Mailchimp footer if not already present
       if (!/UnsubscribeURL|unsub/i.test(html)) {
@@ -1084,7 +1091,7 @@ tableRows +
         }
       }
       releaseSliceCanvas();
-      return buildHTMLDoc(scaledState, { client: null, defaultLink: eo.defaultLink, bodyBgColor: eo.bodyBgColor, gridRows: _gridRows, imageSrc: s => dataURLs[cellKey(s)] || '' });
+      return buildHTMLDoc(scaledState, { client: null, defaultLink: eo.defaultLink, bodyBgColor: eo.bodyBgColor, preheader: eo.preheader, gridRows: _gridRows, imageSrc: s => dataURLs[cellKey(s)] || '' });
     }
 
     // Strategy 1: Render in hidden container and copy the rendered DOM.
@@ -1212,7 +1219,7 @@ tableRows +
     }
 
     if (eo.outputType !== 'images') {
-      const html = buildHTMLDoc(scaledState, { client: null, defaultLink: eo.defaultLink, bodyBgColor: eo.bodyBgColor, gridRows: _gridRows, imageSrc: s => filenames[cellKey(s)] ? `https://your-cdn.example.com/${base}/${filenames[cellKey(s)]}` : '' });
+      const html = buildHTMLDoc(scaledState, { client: null, defaultLink: eo.defaultLink, bodyBgColor: eo.bodyBgColor, preheader: eo.preheader, gridRows: _gridRows, imageSrc: s => filenames[cellKey(s)] ? `https://your-cdn.example.com/${base}/${filenames[cellKey(s)]}` : '' });
       zip.file('index.html', html);
 
       const sesRequest = {
@@ -1316,7 +1323,7 @@ tableRows +
       releaseSliceCanvas();
     }
 
-    const html = buildHTMLDoc(scaledState, { client: null, defaultLink: eo.defaultLink, bodyBgColor: eo.bodyBgColor, gridRows: _gridRows, imageSrc: s => dataURLs[cellKey(s)] || '' });
+    const html = buildHTMLDoc(scaledState, { client: null, defaultLink: eo.defaultLink, bodyBgColor: eo.bodyBgColor, preheader: eo.preheader, gridRows: _gridRows, imageSrc: s => dataURLs[cellKey(s)] || '' });
     const blob = new Blob([html], { type: 'text/html' });
     triggerDownload(blob, (state.imageName || 'edm') + '.html');
     return html;
@@ -1371,6 +1378,7 @@ tableRows +
       client: null,
       defaultLink: eo.defaultLink,
       bodyBgColor: eo.bodyBgColor,
+      preheader: eo.preheader,
       gridRows: _gridRows,
       imageSrc: s => `cid:${cidMap[cellKey(s)]}`,
     });
@@ -1460,6 +1468,7 @@ tableRows +
       client: null,
       defaultLink: eo.defaultLink,
       bodyBgColor: eo.bodyBgColor,
+      preheader: eo.preheader,
       gridRows: _gridRows,
       imageSrc: s => dataURLs[cellKey(s)] || '',
     });
@@ -1582,6 +1591,7 @@ tableRows +
       client: null,
       defaultLink: eo.defaultLink,
       bodyBgColor: eo.bodyBgColor,
+      preheader: eo.preheader,
       gridRows: _gridRows,
       imageSrc: s => cdnUrls[cellKey(s)] || '',
     });
@@ -1593,7 +1603,7 @@ tableRows +
     linkedSlices.forEach(s => {
       const x1 = Math.round(s.x * scaleX), y1 = Math.round(s.y * scaleYv);
       const x2 = Math.round((s.x + s.w) * scaleX), y2 = Math.round((s.y + s.h) * scaleYv);
-      areas += `<area shape="rect" coords="${x1},${y1},${x2},${y2}" href="${escapeAttr(s.href)}" alt="${escapeAttr(s.alt || 'Slice ' + s.id)}" target="_blank" />`;
+      areas += `<area shape="rect" coords="${x1},${y1},${x2},${y2}" href="${escapeAttr(s.href)}" alt="${escapeAttr(s.decorative ? '' : ((s.alt && s.alt.trim()) ? s.alt.trim() : ''))}" target="_blank" />`;
     });
     if (eo.defaultLink) {
       areas += `<area shape="rect" coords="0,0,${outW},${outH}" href="${escapeAttr(eo.defaultLink)}" alt="Email" target="_blank" />`;
@@ -1691,6 +1701,7 @@ table{border-collapse:collapse;border-spacing:0;mso-table-lspace:0pt;mso-table-r
       client: null,
       defaultLink: eo.defaultLink,
       bodyBgColor: eo.bodyBgColor,
+      preheader: eo.preheader,
       gridRows: _gridRows,
       imageSrc: s => cdnUrls[cellKey(s)] || '',
     });
@@ -1771,6 +1782,7 @@ table{border-collapse:collapse;border-spacing:0;mso-table-lspace:0pt;mso-table-r
       client: null,
       defaultLink: eo.defaultLink,
       bodyBgColor: eo.bodyBgColor,
+      preheader: eo.preheader,
       gridRows: _gridRows,
       imageSrc: s => cdnUrls[cellKey(s)] || '',
     });
@@ -1782,6 +1794,7 @@ table{border-collapse:collapse;border-spacing:0;mso-table-lspace:0pt;mso-table-r
   // links for the video tiles (so links work even in Gmail, which strips image maps).
   function buildSingleImageDoc(imgUrl, outW, links, eo, base) {
     const bgColor = eo.bodyBgColor && eo.bodyBgColor !== 'transparent' && eo.bodyBgColor !== 'none' ? eo.bodyBgColor : '#ffffff';
+    const preheader = eo.preheader || '';
     let linksHtml = '';
     if (links && links.length) {
       const items = links.map(l =>
@@ -1808,6 +1821,7 @@ a{text-decoration:none;}
 </style>
 </head>
 <body style="margin:0;padding:0;background:${bgColor};">
+${preheader ? `<div style="display:none;max-height:0;overflow:hidden;mso-hide:all;font-size:1px;line-height:1px;color:#ffffff;opacity:0;">${escapeHtml(preheader)}</div><div style="display:none;max-height:0;overflow:hidden;mso-hide:all;">&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;</div>` : ''}
 <div style="max-width:${outW}px;margin:0 auto;">
 <img src="${escapeAttr(imgUrl)}" width="${outW}" alt="${escapeAttr(base || 'Email')}" style="display:block;width:100%;max-width:${outW}px;height:auto;border:0;outline:none;text-decoration:none;-ms-interpolation-mode:bicubic;" />
 ${linksHtml}

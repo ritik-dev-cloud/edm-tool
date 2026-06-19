@@ -1631,6 +1631,7 @@ function renderSliceList() {
       ` : `
         <input type="url" class="slice-href" placeholder="Link URL (https://...) — leave empty for non-clickable" value="${escapeAttr(s.href)}" data-id="${s.id}">
         <input type="text" class="slice-alt" placeholder="Alt text — describes the image (for accessibility & image-blocked clients)" value="${escapeAttr(s.alt)}" data-id="${s.id}">
+        <label style="display:flex;align-items:center;gap:6px;font-size:11px;color:#94a3b8;margin-top:5px;cursor:pointer;"><input type="checkbox" class="slice-decorative" data-id="${s.id}" ${s.decorative ? 'checked' : ''}> Decorative image (no alt needed)</label>
         <label class="thumb-opt" data-id="${s.id}" style="display:${getVideoThumbUrl(s.href) ? 'flex' : 'none'};align-items:center;gap:6px;font-size:11px;color:#475569;margin-top:6px;cursor:pointer;">
           <input type="checkbox" class="slice-usethumb" data-id="${s.id}" ${s.useThumb ? 'checked' : ''}>
           🎬 Replace this area with the video's thumbnail (off = keep your design)
@@ -1668,6 +1669,13 @@ function renderSliceList() {
     inp.addEventListener('input', e => {
       const slice = state.slices.find(s => s.id == e.target.dataset.id);
       if (slice) { slice.alt = e.target.value; scheduleSave(); }
+    });
+  });
+  // Decorative image checkbox
+  sliceList.querySelectorAll('.slice-decorative').forEach(cb => {
+    cb.addEventListener('change', e => {
+      const slice = state.slices.find(s => s.id == e.target.dataset.id);
+      if (slice) { slice.decorative = e.target.checked; scheduleSave(); runLint(); }
     });
   });
   // Type radio toggle
@@ -1891,6 +1899,26 @@ function runLint() {
   }
   if (overlapCount > 0) {
     issues.push({ level: 'info', msg: `${overlapCount} overlapping slice pair(s) — the newer slice takes priority in the overlap zone. This is handled automatically.` });
+  }
+  // Image-to-text deliverability ratio — image-only emails get flagged as junk.
+  // Only count live text-block slices (NOT burned-in annotations).
+  if (state.image && state.slices.length) {
+    const imageArea = state.image.naturalWidth * state.image.naturalHeight;
+    const textArea = state.slices
+      .filter(s => s.type === 'text' && s.text && s.text.trim())
+      .reduce((sum, s) => sum + (s.w * s.h), 0);
+    const textPct = imageArea ? (textArea / imageArea * 100) : 0;
+    if (textPct < 3) {
+      issues.push({ level: 'warn', msg: `Almost all-image email (~${textPct.toFixed(0)}% live text). Outlook & spam filters often flag image-only emails as junk — add a Text block (press T) with real copy.` });
+    } else if (textPct < 10) {
+      issues.push({ level: 'info', msg: `Low live-text ratio (~${textPct.toFixed(0)}%). Consider adding more real text for deliverability.` });
+    }
+  }
+  // Accessibility — image slices with no alt and not marked decorative.
+  const noAltSlices = state.slices.filter(s => s.type !== 'text' && !s.decorative && !(s.alt && s.alt.trim()));
+  if (noAltSlices.length > 0) {
+    const ids = noAltSlices.map(s => `#${s.id}`).join(', ');
+    issues.push({ level: 'warn', msg: `${noAltSlices.length} image slice(s) have no alt text (${ids}). Add alt, or mark them Decorative — Outlook shows alt text when it blocks images.` });
   }
   if (issues.length === 0) {
     lintList.innerHTML = '<li class="lint-ok">All checks pass — ready to export.</li><li class="lint-ok">Dark mode safe — slices render seamlessly on light and dark backgrounds.</li>';
@@ -2142,7 +2170,8 @@ function getExportSettings() {
   const cloudinaryEnabled = esCloudinaryEnabled ? esCloudinaryEnabled.checked : false;
   const cloudName = esCloudName ? esCloudName.value.trim() : '';
   const uploadPreset = esUploadPreset ? esUploadPreset.value.trim() : '';
-  return { targetWidth, targetHeight, format, quality, outputType, defaultLink, bodyBgColor, cloudinaryEnabled, cloudName, uploadPreset };
+  const preheader = (document.getElementById('esPreheader') ? document.getElementById('esPreheader').value.trim() : '');
+  return { targetWidth, targetHeight, format, quality, outputType, defaultLink, bodyBgColor, cloudinaryEnabled, cloudName, uploadPreset, preheader };
 }
 
 // Snapshot export settings for save/load — captures which buttons/values are active.
@@ -2162,6 +2191,7 @@ function getExportSettingsSnapshot() {
     cloudName: esCloudName ? esCloudName.value : '',
     uploadPreset: esUploadPreset ? esUploadPreset.value : '',
     cloudinaryEnabled: esCloudinaryEnabled ? esCloudinaryEnabled.checked : false,
+    preheader: (document.getElementById('esPreheader') ? document.getElementById('esPreheader').value : ''),
   };
 }
 
@@ -2196,6 +2226,9 @@ function restoreExportSettings(es) {
   if (esCloudName && es.cloudName) esCloudName.value = es.cloudName;
   if (esUploadPreset && es.uploadPreset) esUploadPreset.value = es.uploadPreset;
   if (esCloudinaryEnabled) esCloudinaryEnabled.checked = !!es.cloudinaryEnabled;
+  // Inbox preview text (preheader)
+  const _esPreheader = document.getElementById('esPreheader');
+  if (_esPreheader && es.preheader != null) _esPreheader.value = es.preheader;
 }
 
 // ---- Export dropdown ----
