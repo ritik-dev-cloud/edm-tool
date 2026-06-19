@@ -665,14 +665,20 @@ tableRows +
     const filenames = {};
     let idx = 0;
 
+    // Retina: render each canvas at up to 2x its display size for sharpness on
+    // hi-dpi/4K screens, while the <img> width/max-width stay 1x (display px).
+    // Clamp the factor to the source pixels so we never upscale past the original.
+    const RETINA = 2;
     if (eo.outputType !== 'html') {
       for (const s of cells) {
         try {
           const outW = Math.round(s.w);
           const outH = Math.round(s.h);
           const origCell = { x: s._origX, y: s._origY, w: s._origW, h: s._origH };
+          const factor = outW ? Math.max(1, Math.min(RETINA, origCell.w / outW)) : RETINA;
+          const retW = Math.round(outW * factor), retH = Math.round(outH * factor);
           const thumb = getCellThumb(s);
-          const canvas = sliceToCanvas(state.image, origCell, outW, outH, state.annotations, thumb);
+          const canvas = sliceToCanvas(state.image, origCell, retW, retH, state.annotations, thumb);
           const blob = await canvasToBlob(canvas, eo.mimeType, eo.quality);
           const fname = `slice_${String(++idx).padStart(2, '0')}${eo.ext}`;
           filenames[cellKey(s)] = fname;
@@ -816,12 +822,18 @@ tableRows +
     const imgParts = []; // each: { cid, filename, base64, mimeType }
     let idx = 0;
 
+    // Retina: render each canvas at up to 2x its display size for sharpness on
+    // hi-dpi/4K screens, while the <img> width/max-width stay 1x (display px).
+    // Clamp the factor to the source pixels so we never upscale past the original.
+    const RETINA = 2;
     for (const s of cells) {
       try {
         const outW = Math.round(s.w);
         const outH = Math.round(s.h);
         const origCell = { x: s._origX, y: s._origY, w: s._origW, h: s._origH };
-        const canvas = sliceToCanvas(state.image, origCell, outW, outH, state.annotations, getCellThumb(s));
+        const factor = outW ? Math.max(1, Math.min(RETINA, origCell.w / outW)) : RETINA;
+        const retW = Math.round(outW * factor), retH = Math.round(outH * factor);
+        const canvas = sliceToCanvas(state.image, origCell, retW, retH, state.annotations, getCellThumb(s));
         const blob = await canvasToBlob(canvas, eo.mimeType, eo.quality);
         const b64 = await blobToBase64(blob);
         const cid = `slice_${String(++idx).padStart(2, '0')}.${base}@edmtool.local`;
@@ -938,13 +950,19 @@ tableRows +
     const { cells, gridRows: _gridRows } = collectGridCells(state, scaledState, eo);
     const filenames = {};
     let mcIdx = 0;
+    // Retina: render each canvas at up to 2x its display size for sharpness on
+    // hi-dpi/4K screens, while the <img> width/max-width stay 1x (display px).
+    // Clamp the factor to the source pixels so we never upscale past the original.
+    const RETINA = 2;
     if (eo.outputType !== 'html') {
       for (const s of cells) {
         try {
           const outW = Math.round(s.w);
           const outH = Math.round(s.h);
           const origCell = { x: s._origX, y: s._origY, w: s._origW, h: s._origH };
-          const canvas = sliceToCanvas(state.image, origCell, outW, outH, state.annotations, getCellThumb(s));
+          const factor = outW ? Math.max(1, Math.min(RETINA, origCell.w / outW)) : RETINA;
+          const retW = Math.round(outW * factor), retH = Math.round(outH * factor);
+          const canvas = sliceToCanvas(state.image, origCell, retW, retH, state.annotations, getCellThumb(s));
           const blob = await canvasToBlob(canvas, eo.mimeType, eo.quality);
           const fname = `slice_${String(++mcIdx).padStart(2, '0')}${eo.ext}`;
           filenames[cellKey(s)] = fname;
@@ -1046,12 +1064,18 @@ tableRows +
     function generateHtml() {
       const dataURLs = {};
       const { cells, gridRows: _gridRows } = collectGridCells(state, scaledState, eo);
+      // Retina: render each canvas at up to 2x its display size for sharpness on
+      // hi-dpi/4K screens, while the <img> width/max-width stay 1x (display px).
+      // Clamp the factor to the source pixels so we never upscale past the original.
+      const RETINA = 2;
       for (const s of cells) {
         try {
           const outW = Math.round(s.w);
           const outH = Math.round(s.h);
           const origCell = { x: s._origX, y: s._origY, w: s._origW, h: s._origH };
-          const c = sliceToCanvas(state.image, origCell, outW, outH, state.annotations, getCellThumb(s));
+          const factor = outW ? Math.max(1, Math.min(RETINA, origCell.w / outW)) : RETINA;
+          const retW = Math.round(outW * factor), retH = Math.round(outH * factor);
+          const c = sliceToCanvas(state.image, origCell, retW, retH, state.annotations, getCellThumb(s));
           const dataUrl = c.toDataURL(eo.mimeType, eo.quality);
           dataURLs[cellKey(s)] = (dataUrl && dataUrl.length > 50) ? dataUrl : '';
         } catch (err) {
@@ -1162,13 +1186,19 @@ tableRows +
     const { cells, gridRows: _gridRows } = collectGridCells(state, scaledState, eo);
     const filenames = {};
     let sesIdx = 0;
+    // Retina: render each canvas at up to 2x its display size for sharpness on
+    // hi-dpi/4K screens, while the <img> width/max-width stay 1x (display px).
+    // Clamp the factor to the source pixels so we never upscale past the original.
+    const RETINA = 2;
     if (eo.outputType !== 'html') {
       for (const s of cells) {
         try {
           const outW = Math.round(s.w);
           const outH = Math.round(s.h);
           const origCell = { x: s._origX, y: s._origY, w: s._origW, h: s._origH };
-          const canvas = sliceToCanvas(state.image, origCell, outW, outH, state.annotations, getCellThumb(s));
+          const factor = outW ? Math.max(1, Math.min(RETINA, origCell.w / outW)) : RETINA;
+          const retW = Math.round(outW * factor), retH = Math.round(outH * factor);
+          const canvas = sliceToCanvas(state.image, origCell, retW, retH, state.annotations, getCellThumb(s));
           const blob = await canvasToBlob(canvas, eo.mimeType, eo.quality);
           const fname = `slice_${String(++sesIdx).padStart(2, '0')}${eo.ext}`;
           filenames[cellKey(s)] = fname;
@@ -1312,12 +1342,18 @@ tableRows +
     const imgParts = [];
     let oftIdx = 0;
 
+    // Retina: render each canvas at up to 2x its display size for sharpness on
+    // hi-dpi/4K screens, while the <img> width/max-width stay 1x (display px).
+    // Clamp the factor to the source pixels so we never upscale past the original.
+    const RETINA = 2;
     for (const s of cells) {
       try {
         const outW = Math.round(s.w);
         const outH = Math.round(s.h);
         const origCell = { x: s._origX, y: s._origY, w: s._origW, h: s._origH };
-        const canvas = sliceToCanvas(state.image, origCell, outW, outH, state.annotations, getCellThumb(s));
+        const factor = outW ? Math.max(1, Math.min(RETINA, origCell.w / outW)) : RETINA;
+        const retW = Math.round(outW * factor), retH = Math.round(outH * factor);
+        const canvas = sliceToCanvas(state.image, origCell, retW, retH, state.annotations, getCellThumb(s));
         const blob = await canvasToBlob(canvas, eo.mimeType, eo.quality);
         const b64 = await blobToBase64(blob);
         const cid = `slice_${String(++oftIdx).padStart(2, '0')}.${base}@edmtool.local`;
@@ -1399,12 +1435,18 @@ tableRows +
     const scaledState = scaleState(state, eo.scale, eo.scaleY);
     const dataURLs = {};
     const { cells, gridRows: _gridRows } = collectGridCells(state, scaledState, eo);
+    // Retina: render each canvas at up to 2x its display size for sharpness on
+    // hi-dpi/4K screens, while the <img> width/max-width stay 1x (display px).
+    // Clamp the factor to the source pixels so we never upscale past the original.
+    const RETINA = 2;
     for (const s of cells) {
       try {
         const outW = Math.round(s.w);
         const outH = Math.round(s.h);
         const origCell = { x: s._origX, y: s._origY, w: s._origW, h: s._origH };
-        const c = sliceToCanvas(state.image, origCell, outW, outH, state.annotations, getCellThumb(s));
+        const factor = outW ? Math.max(1, Math.min(RETINA, origCell.w / outW)) : RETINA;
+        const retW = Math.round(outW * factor), retH = Math.round(outH * factor);
+        const c = sliceToCanvas(state.image, origCell, retW, retH, state.annotations, getCellThumb(s));
         const dataUrl = c.toDataURL(eo.mimeType, eo.quality);
         dataURLs[cellKey(s)] = (dataUrl && dataUrl.length > 50) ? dataUrl : '';
       } catch (err) {
@@ -1485,13 +1527,19 @@ tableRows +
     const totalSteps = cells.length + 1; // +1 for the full image
     let step = 0;
 
+    // Retina: render each canvas at up to 2x its display size for sharpness on
+    // hi-dpi/4K screens, while the <img> width/max-width stay 1x (display px).
+    // Clamp the factor to the source pixels so we never upscale past the original.
+    const RETINA = 2;
     for (const s of cells) {
       step++;
       if (onProgress) onProgress(step, totalSteps, 'Gmail');
       const outCW = Math.round(s.w);
       const outCH = Math.round(s.h);
       const origCell = { x: s._origX, y: s._origY, w: s._origW, h: s._origH };
-      const canvas = sliceToCanvas(state.image, origCell, outCW, outCH, state.annotations, getCellThumb(s));
+      const factor = outCW ? Math.max(1, Math.min(RETINA, origCell.w / outCW)) : RETINA;
+      const retW = Math.round(outCW * factor), retH = Math.round(outCH * factor);
+      const canvas = sliceToCanvas(state.image, origCell, retW, retH, state.annotations, getCellThumb(s));
       const blob = await canvasToBlob(canvas, eo.mimeType, eo.quality);
       const fname = `${base}_${String(step).padStart(2, '0')}${eo.ext}`;
       const result = await uploadToCloudinary(blob, cloudName, uploadPreset, fname);
@@ -1500,14 +1548,19 @@ tableRows +
     }
 
     // Phase 2: Upload single full image for Outlook/Apple version
+    // Retina: draw the full image at up to 2x the display size for sharpness on
+    // hi-dpi/4K screens; the <img> width/height in the generated HTML stay at the
+    // 1x outW/outH. Clamp to the source so we never upscale past the original.
     step++;
     if (onProgress) onProgress(step, totalSteps, 'Outlook');
-    const { canvas: fullCanvas, ctx: fullCtx } = getSliceCanvas(outW, outH);
+    const fullFactor = outW ? Math.max(1, Math.min(RETINA, natW / outW)) : RETINA;
+    const fullRetW = Math.round(outW * fullFactor), fullRetH = Math.round(outH * fullFactor);
+    const { canvas: fullCanvas, ctx: fullCtx } = getSliceCanvas(fullRetW, fullRetH);
     fullCtx.imageSmoothingEnabled = true;
     fullCtx.imageSmoothingQuality = 'high';
-    fullCtx.drawImage(state.image, 0, 0, natW, natH, 0, 0, outW, outH);
+    fullCtx.drawImage(state.image, 0, 0, natW, natH, 0, 0, fullRetW, fullRetH);
     if (state.annotations && state.annotations.length) {
-      const sx = outW / natW, sy = outH / natH;
+      const sx = fullRetW / natW, sy = fullRetH / natH;
       fullCtx.textBaseline = 'top';
       state.annotations.forEach(a => {
         const ax = a.x * sx, ay = a.y * sy;
@@ -1612,13 +1665,19 @@ table{border-collapse:collapse;border-spacing:0;mso-table-lspace:0pt;mso-table-r
     const cdnUrls = {};
     const total = cells.length;
     let step = 0;
+    // Retina: render each canvas at up to 2x its display size for sharpness on
+    // hi-dpi/4K screens, while the <img> width/max-width stay 1x (display px).
+    // Clamp the factor to the source pixels so we never upscale past the original.
+    const RETINA = 2;
     for (const s of cells) {
       step++;
       if (onProgress) onProgress(step, total, 'CDN');
       const outCW = Math.round(s.w);
       const outCH = Math.round(s.h);
       const origCell = { x: s._origX, y: s._origY, w: s._origW, h: s._origH };
-      const canvas = sliceToCanvas(state.image, origCell, outCW, outCH, state.annotations, getCellThumb(s));
+      const factor = outCW ? Math.max(1, Math.min(RETINA, origCell.w / outCW)) : RETINA;
+      const retW = Math.round(outCW * factor), retH = Math.round(outCH * factor);
+      const canvas = sliceToCanvas(state.image, origCell, retW, retH, state.annotations, getCellThumb(s));
       const blob = await canvasToBlob(canvas, eo.mimeType, eo.quality);
       const fname = `${base}_${String(step).padStart(2, '0')}${eo.ext}`;
       const result = await uploadToCloudinary(blob, cloudName, uploadPreset, fname);
@@ -1688,11 +1747,19 @@ table{border-collapse:collapse;border-spacing:0;mso-table-lspace:0pt;mso-table-r
     const cdnUrls = {};
     const total = cells.length;
     let step = 0;
+    // Retina: render each canvas at up to 2x its display size for sharpness on
+    // hi-dpi/4K screens, while the <img> width/max-width stay 1x (display px).
+    // Clamp the factor to the source pixels so we never upscale past the original.
+    const RETINA = 2;
     for (const s of cells) {
       step++;
       if (onProgress) onProgress(step, total, 'CDN');
+      const outW = Math.round(s.w);
+      const outH = Math.round(s.h);
       const origCell = { x: s._origX, y: s._origY, w: s._origW, h: s._origH };
-      const canvas = sliceToCanvas(state.image, origCell, Math.round(s.w), Math.round(s.h), state.annotations, getCellThumb(s));
+      const factor = outW ? Math.max(1, Math.min(RETINA, origCell.w / outW)) : RETINA;
+      const retW = Math.round(outW * factor), retH = Math.round(outH * factor);
+      const canvas = sliceToCanvas(state.image, origCell, retW, retH, state.annotations, getCellThumb(s));
       const blob = await canvasToBlob(canvas, eo.mimeType, eo.quality);
       const fname = `${base}_${String(step).padStart(2, '0')}${eo.ext}`;
       const result = await uploadToCloudinary(blob, cloudName, uploadPreset, fname);
