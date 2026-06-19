@@ -2239,12 +2239,11 @@ async function runExport(fmt) {
     let cdnHandled = false;
     const cdnReady = eo.cloudinaryEnabled && eo.cloudName && eo.uploadPreset;
     if (fmt === 'outlook') {
-      const from    = prompt('From address (sender):', 'campaigns@communiqueindia.com');
-      if (from === null) return;
-      const to      = prompt('To address:', 'recipient@example.com');
-      if (to === null) return;
-      const subject = prompt('Subject line:', (state.imageName || 'EDM') + ' campaign');
-      if (subject === null) return;
+      // No prompts — the .eml just downloads. Recipient/subject are set in
+      // Outlook when forwarding. Sensible defaults fill the placeholder headers.
+      const from    = 'campaigns@communiqueindia.com';
+      const to      = '';
+      const subject = state.projectName || state.imageName || 'EDM Newsletter';
       if (cdnReady) {
         // CDN-backed .eml: hosted images, zero attachments.
         exportForBtn.textContent = 'Uploading to CDN…';
