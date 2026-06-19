@@ -1702,10 +1702,79 @@ table{border-collapse:collapse;border-spacing:0;mso-table-lspace:0pt;mso-table-r
     return { html, imageCount: cells.length, linkedSlices: state.slices.filter(s => s.href && s.type !== 'text').length };
   }
 
+  // Build the single-image email HTML: one full-width image (scales perfectly
+  // on every device, can't misalign or stretch) plus a row of clickable text
+  // links for the video tiles (so links work even in Gmail, which strips image maps).
+  function buildSingleImageDoc(imgUrl, outW, links, eo, base) {
+    const bgColor = eo.bodyBgColor && eo.bodyBgColor !== 'transparent' && eo.bodyBgColor !== 'none' ? eo.bodyBgColor : '#ffffff';
+    let linksHtml = '';
+    if (links && links.length) {
+      const items = links.map(l =>
+        `<a href="${escapeAttr(l.href)}" target="_blank" style="color:#0a66c2;text-decoration:underline;white-space:nowrap;">${escapeHtml(l.label)}</a>`
+      ).join(' &nbsp;&middot;&nbsp; ');
+      linksHtml =
+        `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:${outW}px;border-collapse:collapse;">` +
+        `<tr><td style="padding:14px 18px;font-family:Arial,Helvetica,sans-serif;font-size:14px;line-height:1.7;color:#333333;text-align:center;">` +
+        `<span style="font-weight:bold;">&#9658; Watch:</span> ${items}` +
+        `</td></tr></table>`;
+    }
+    return `<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="color-scheme" content="light only" />
+<title>EDM</title>
+<style type="text/css">
+:root{color-scheme:light only;}
+body{margin:0;padding:0;background:${bgColor};-webkit-text-size-adjust:100%;-ms-text-size-adjust:100%;}
+img{display:block;border:0;outline:none;text-decoration:none;-ms-interpolation-mode:bicubic;}
+a{text-decoration:none;}
+</style>
+</head>
+<body style="margin:0;padding:0;background:${bgColor};">
+<div style="max-width:${outW}px;margin:0 auto;">
+<img src="${escapeAttr(imgUrl)}" width="${outW}" alt="${escapeAttr(base || 'Email')}" style="display:block;width:100%;max-width:${outW}px;height:auto;border:0;outline:none;text-decoration:none;-ms-interpolation-mode:bicubic;" />
+${linksHtml}
+</div>
+</body>
+</html>`;
+  }
+
+  async function exportSingleImage(state, exportOpts, opts) {
+    if (!state.image) throw new Error('No image loaded');
+    opts = opts || {};
+    const eo = resolveExportOpts(state, exportOpts);
+    const base = (state.imageName || 'edm').replace(/[^a-zA-Z0-9_-]/g, '_');
+    const natW = state.image.naturalWidth, natH = state.image.naturalHeight;
+    const outW = Math.round(natW * eo.scale), outH = Math.round(natH * eo.scaleY);
+
+    // Render the whole design as ONE image (annotations baked in).
+    const canvas = sliceToCanvas(state.image, { x: 0, y: 0, w: natW, h: natH }, outW, outH, state.annotations);
+    let imgUrl;
+    if (opts.cloudName && opts.uploadPreset) {
+      const blob = await canvasToBlob(canvas, eo.mimeType, eo.quality);
+      const res = await uploadToCloudinary(blob, opts.cloudName, opts.uploadPreset, `${base}_full${eo.ext}`);
+      imgUrl = res.secure_url;
+    } else {
+      imgUrl = canvas.toDataURL(eo.mimeType, eo.quality);
+    }
+    releaseSliceCanvas();
+
+    const links = state.slices
+      .filter(s => s.href && s.type !== 'text')
+      .sort((a, b) => (a.y - b.y) || (a.x - b.x))
+      .map((s, i) => ({ href: s.href, label: (s.alt && s.alt.trim()) || `Video ${i + 1}` }));
+
+    const html = buildSingleImageDoc(imgUrl, outW, links, eo, base);
+    return { html, imageUrl: imgUrl, linkCount: links.length };
+  }
+
   window.EDMExporter = {
     buildHTML, exportZip, exportEml, exportOft,
     exportMailchimp, exportGmailClipboard, exportSES, exportRawHtml,
     exportGmailImage, exportGmailHtml,
     testCloudinary, exportCloudinary, exportEmlCloud, buildCdnGmailHtml,
+    exportSingleImage,
   };
 })();

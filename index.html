@@ -6,12 +6,12 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="styles.css?v=0.9.3">
+<link rel="stylesheet" href="styles.css?v=0.9.4">
 </head>
 <body>
 
 <header class="topbar">
-  <h1><span>EDM Builder<span class="brand-sub">Communique · Email Design Studio</span></span> <span class="tag">v0.9.3</span></h1>
+  <h1><span>EDM Builder<span class="brand-sub">Communique · Email Design Studio</span></span> <span class="tag">v0.9.4</span></h1>
   <input type="text" id="projectNameInput" class="project-name-input" placeholder="Untitled project — click to name" />
   <span id="saveIndicator" class="save-indicator"></span>
   <div class="project-io">
@@ -29,6 +29,7 @@
     <div class="dropdown">
       <button id="exportForBtn" class="btn primary" disabled>Export for ▾</button>
       <div class="dropdown-menu" id="exportMenu">
+        <button data-format="singleimage" class="dropdown-item"><span class="icon">📱</span> <div><b>Single image (best for mobile)</b><span class="desc">One crisp image + video text-links. Looks identical on every phone &amp; client. Copy → paste in Gmail.</span></div></button>
         <button data-format="outlook"   class="dropdown-item"><span class="icon">📧</span> <div><b>Outlook (.eml)</b><span class="desc">Self-contained. Open → Forward → Send.</span></div></button>
         <button data-format="oft"       class="dropdown-item"><span class="icon">📋</span> <div><b>Outlook Template (.oft)</b><span class="desc">Reusable template. Open → customise → send to anyone.</span></div></button>
         <button data-format="mailchimp" class="dropdown-item"><span class="icon">📬</span> <div><b>Mailchimp</b><span class="desc">HTML + images.zip with merge tags. Paste in "Code your own".</span></div></button>
@@ -287,8 +288,8 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
-<script src="exporter.js?v=0.9.3"></script>
-<script src="app.js?v=0.9.3"></script>
+<script src="exporter.js?v=0.9.4"></script>
+<script src="app.js?v=0.9.4"></script>
 <script>
 /* Dashboard stat cards — mirrors live values from the app UI */
 (function () {

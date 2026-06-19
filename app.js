@@ -2238,7 +2238,14 @@ async function runExport(fmt) {
     let result;
     let cdnHandled = false;
     const cdnReady = eo.cloudinaryEnabled && eo.cloudName && eo.uploadPreset;
-    if (fmt === 'outlook') {
+    if (fmt === 'singleimage') {
+      // One full image (perfect on every device) + clickable video text-links.
+      cdnHandled = true; // copy button handles CDN on demand; no auto dual-download
+      if (cdnReady) exportForBtn.textContent = 'Uploading to CDN…';
+      const res = await window.EDMExporter.exportSingleImage(state, eo, cdnReady ? { cloudName: eo.cloudName, uploadPreset: eo.uploadPreset } : {});
+      _lastCdnGmailHtml = res.html || '';
+      showAfterExport('singleimage', res);
+    } else if (fmt === 'outlook') {
       // No prompts — the .eml just downloads. Recipient/subject are set in
       // Outlook when forwarding. Sensible defaults fill the placeholder headers.
       const from    = 'campaigns@communiqueindia.com';
@@ -2391,6 +2398,29 @@ function showAfterExport(fmt, result) {
           The footer includes <code>*|UNSUB|*</code>, <code>*|ARCHIVE|*</code>, <code>*|UPDATE_PROFILE|*</code> merge tags — Mailchimp auto-replaces these at send time. Don't edit them.
         </p>`,
     },
+    singleimage: {
+      title: 'Single image — looks perfect on every device',
+      body: `
+        <div style="margin:0 0 16px;padding:12px 14px;background:#e7f8f1;border-radius:8px;border-left:4px solid #10b981;font-size:13px;">
+          ✓ Your newsletter is now <b>one image</b> — it scales to fit any phone or laptop and <b>can't misalign or stretch</b>. The video links sit as clickable text under the image, so they work in Gmail too.
+        </div>
+        <div style="margin:0 0 18px;padding:18px;background:#f0f4ff;border-radius:10px;border:1px solid #c5cfe0;text-align:center;">
+          <p style="margin:0 0 4px;font-weight:700;font-size:16px;">Step 1 — click to copy 👇</p>
+          <p style="margin:0 0 14px;font-size:12px;color:#5f6368;"><b>Nothing downloads</b> — there's no file to attach.</p>
+          <button id="singleImgCopyBtn" style="padding:13px 36px;font-size:16px;font-weight:700;background:#d93025;color:#fff;border:none;border-radius:9px;cursor:pointer;">📋 Copy newsletter</button>
+          <div style="margin:16px 0 0;text-align:left;font-size:13px;color:#333;background:#fff;border-radius:8px;padding:12px 14px;">
+            <b>Step 2 — paste into Gmail:</b>
+            <ol style="margin:6px 0 0;padding-left:20px;">
+              <li>Open Gmail → <b>Compose</b></li>
+              <li>Click in the body → press <b>Ctrl+V</b></li>
+              <li>Add recipient → <b>Send</b></li>
+            </ol>
+          </div>
+        </div>
+        <p style="margin:0;background:#fff4e0;padding:10px 12px;border-radius:6px;border-left:3px solid #f59e0b;font-size:12px;">
+          <b>Tip:</b> to rename a video link, set the slice's <b>Alt text</b> (e.g. "Watch the highlights") before exporting — that becomes the link label. Otherwise they're "Video 1, Video 2…".
+        </p>`,
+    },
     gmail: {
       title: 'Send via Gmail — copy & paste, no file needed',
       body: `
@@ -2492,6 +2522,14 @@ function showAfterExport(fmt, result) {
     outlookCdnCopyBtn.addEventListener('click', () => {
       if (!_lastCdnGmailHtml) { alert('No HTML to copy.'); return; }
       copyHtmlToClipboard(_lastCdnGmailHtml, outlookCdnCopyBtn);
+    });
+  }
+
+  const singleImgCopyBtn = afterExportBody.querySelector('#singleImgCopyBtn');
+  if (singleImgCopyBtn) {
+    singleImgCopyBtn.addEventListener('click', () => {
+      if (!_lastCdnGmailHtml) { alert('No HTML to copy.'); return; }
+      copyHtmlToClipboard(_lastCdnGmailHtml, singleImgCopyBtn);
     });
   }
 
