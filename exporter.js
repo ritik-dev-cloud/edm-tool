@@ -365,7 +365,9 @@
   }
 
   // Render a text-block slice's content (used inside the parent <td>).
-  function textCellContent(slice) {
+  // When `editable` is true, the text node is contenteditable so a recipient
+  // can edit it directly in the Editable-template export (no slicing tool).
+  function textCellContent(slice, editable) {
     const ts = slice.textStyle || {};
     const styleParts = [
       `font-family:Arial,Helvetica,sans-serif`,
@@ -377,7 +379,8 @@
       ts.italic ? 'font-style:italic' : '',
     ].filter(Boolean).join(';');
     const safe = escapeHtml(slice.text || '').replace(/\n/g, '<br/>');
-    const inner = `<div style="${styleParts};padding:12px;">${safe}</div>`;
+    const editAttr = editable ? ' contenteditable="true" class="edm-editable"' : '';
+    const inner = `<div${editAttr} style="${styleParts};padding:12px;">${safe}</div>`;
     if (slice.href) {
       return `<a href="${escapeAttr(slice.href)}" target="_blank" style="display:block;text-decoration:none;color:inherit;">${inner}</a>`;
     }
@@ -450,7 +453,7 @@
             const hasBg = ts.bg && ts.bg !== 'transparent';
             const bgAttr = hasBg ? ` bgcolor="${ts.bg}"` : '';
             const bgStyle = hasBg ? `background-color:${ts.bg};` : '';
-            tableRows += `<tr style="line-height:0;font-size:0;padding:0;margin:0;border:0 none;"><td align="left" valign="top" width="${totalWidth}"${bgAttr} style="width:100%;max-width:${totalWidth}px;${bgStyle}padding:0;margin:0;border:0 none;overflow:hidden;mso-line-height-rule:exactly;${msoHeightFix}">${textCellContent(cell)}</td></tr>`;
+            tableRows += `<tr style="line-height:0;font-size:0;padding:0;margin:0;border:0 none;"><td align="left" valign="top" width="${totalWidth}"${bgAttr} style="width:100%;max-width:${totalWidth}px;${bgStyle}padding:0;margin:0;border:0 none;overflow:hidden;mso-line-height-rule:exactly;${msoHeightFix}">${textCellContent(cell, opts.editable)}</td></tr>`;
           } else {
             tableRows += `<tr style="line-height:0;font-size:0;padding:0;margin:0;border:0 none;"><td align="left" valign="top" width="${totalWidth}" style="width:100%;max-width:${totalWidth}px;padding:0;margin:0;border:0 none;font-size:0;line-height:0;overflow:hidden;mso-line-height-rule:exactly;${msoHeightFix}">${imgCell(cell, opts.imageSrc(cell), totalWidth, defLink)}</td></tr>`;
           }
@@ -464,7 +467,7 @@
               const hasBg = ts.bg && ts.bg !== 'transparent';
               const bgAttr = hasBg ? ` bgcolor="${ts.bg}"` : '';
               const bgStyle = hasBg ? `background-color:${ts.bg};` : '';
-              innerTds += `<td align="left" valign="top" width="${w}"${bgAttr} style="width:${pct}%;${bgStyle}padding:0;margin:0;border:0 none;overflow:hidden;mso-line-height-rule:exactly;">${textCellContent(cell)}</td>`;
+              innerTds += `<td align="left" valign="top" width="${w}"${bgAttr} style="width:${pct}%;${bgStyle}padding:0;margin:0;border:0 none;overflow:hidden;mso-line-height-rule:exactly;">${textCellContent(cell, opts.editable)}</td>`;
             } else {
               innerTds += `<td align="left" valign="top" width="${w}" style="width:${pct}%;padding:0;margin:0;border:0 none;font-size:0;line-height:0;overflow:hidden;mso-line-height-rule:exactly;">${imgCell(cell, opts.imageSrc(cell), w, defLink)}</td>`;
             }
@@ -1868,11 +1871,69 @@ ${linksHtml}
     return { html, imageUrl: imgUrl, linkCount: links.length };
   }
 
+  // Editable template: a self-contained .html where every TEXT block is
+  // click-to-edit in the browser, so a recipient can change the copy without
+  // the slicing tool, then Copy/Download the finished email. Image slices stay
+  // fixed (pixels). Pair with the OCR feature to make design text editable first.
+  async function exportEditableTemplate(state, exportOpts) {
+    if (!state.image) throw new Error('No image loaded');
+    const eo = resolveExportOpts(state, exportOpts);
+    const scaledState = scaleState(state, eo.scale, eo.scaleY);
+    const dataURLs = {};
+    const { cells, gridRows } = collectGridCells(state, scaledState, eo);
+    const RETINA = 2;
+    for (const s of cells) {
+      const outW = Math.round(s.w), outH = Math.round(s.h);
+      const origCell = { x: s._origX, y: s._origY, w: s._origW, h: s._origH };
+      const factor = outW ? Math.max(1, Math.min(RETINA, origCell.w / outW)) : RETINA;
+      const c = sliceToCanvas(state.image, origCell, Math.round(outW * factor), Math.round(outH * factor), state.annotations, getCellThumb(s));
+      const dataUrl = c.toDataURL(eo.mimeType, eo.quality);
+      dataURLs[cellKey(s)] = (dataUrl && dataUrl.length > 50) ? dataUrl : '';
+      await new Promise(r => setTimeout(r, 0));
+    }
+    releaseSliceCanvas();
+
+    const emailDoc = buildHTMLDoc(scaledState, {
+      client: null, defaultLink: eo.defaultLink, bodyBgColor: eo.bodyBgColor,
+      gridRows, imageSrc: s => dataURLs[cellKey(s)] || '', preheader: eo.preheader, editable: true,
+    });
+    // Pull the rendered email out of the generated doc's <body> and re-wrap it
+    // with an editing toolbar + script (which are stripped from the final output).
+    const bodyMatch = emailDoc.match(/<body[^>]*>([\s\S]*)<\/body>/i);
+    const emailInner = bodyMatch ? bodyMatch[1] : emailDoc;
+    const editorScript =
+      "(function(){var email=document.getElementById('edm-email');if(!email)return;" +
+      "email.addEventListener('click',function(e){var a=e.target.closest&&e.target.closest('a');if(a)e.preventDefault();});" +
+      "function clean(){var c=email.cloneNode(true);c.querySelectorAll('[contenteditable]').forEach(function(el){el.removeAttribute('contenteditable');el.classList.remove('edm-editable');if(!el.getAttribute('class'))el.removeAttribute('class');});return c.innerHTML;}" +
+      "var cp=document.getElementById('edm-copy');if(cp)cp.addEventListener('click',function(){var h=clean();if(navigator.clipboard&&window.ClipboardItem){navigator.clipboard.write([new ClipboardItem({'text/html':new Blob([h],{type:'text/html'})})]).then(function(){cp.textContent='Copied! Paste into Gmail/Outlook';setTimeout(function(){cp.textContent='\\uD83D\\uDCCB Copy final email';},2500);},function(){alert('Copy failed - use Download instead.');});}else{alert('Clipboard not supported - use Download.');}});" +
+      "var dl=document.getElementById('edm-download');if(dl)dl.addEventListener('click',function(){var doc='<!DOCTYPE html><html><head><meta charset=\\\"utf-8\\\"><meta name=\\\"viewport\\\" content=\\\"width=device-width,initial-scale=1\\\"></head><body style=\\\"margin:0;padding:0;\\\">'+clean()+'</body></html>';var b=new Blob([doc],{type:'text/html'});var u=URL.createObjectURL(b);var a=document.createElement('a');a.href=u;a.download='newsletter_final.html';document.body.appendChild(a);a.click();a.remove();setTimeout(function(){URL.revokeObjectURL(u);},2000);});" +
+      "})();";
+    const html = '<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">' +
+      '<title>Editable newsletter</title><style>' +
+      'body{margin:0;padding:0;background:#eef1f6;}' +
+      '#edm-toolbar{position:sticky;top:0;z-index:99999;background:#0f172a;color:#fff;padding:12px 16px;font-family:Arial,Helvetica,sans-serif;font-size:14px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;box-shadow:0 2px 10px rgba(0,0,0,.25);}' +
+      '#edm-toolbar .hint{font-size:12px;color:#9ca3af;}' +
+      '#edm-toolbar button{padding:8px 16px;border:none;border-radius:7px;font-weight:600;cursor:pointer;font-size:13px;}' +
+      '#edm-copy{background:#ff8a00;color:#fff;} #edm-download{background:rgba(255,255,255,.14);color:#fff;}' +
+      '#edm-email{margin:18px auto;}' +
+      '.edm-editable{outline:1px dashed #c7d2fe;outline-offset:1px;cursor:text;transition:outline .12s;}' +
+      '.edm-editable:hover{outline:2px dashed #6366f1;}' +
+      '.edm-editable:focus{outline:2px solid #6366f1;background:#fffdf3;}' +
+      '</style></head><body>' +
+      '<div id="edm-toolbar"><b>✏️ Editable newsletter</b><span class="hint">Click any dashed text to edit it. Images stay fixed. When done, copy or download.</span><span style="flex:1"></span>' +
+      '<button id="edm-copy">📋 Copy final email</button><button id="edm-download">💾 Download .html</button></div>' +
+      '<div id="edm-email">' + emailInner + '</div>' +
+      '<script>' + editorScript + '<\/script></body></html>';
+
+    triggerDownload(new Blob([html], { type: 'text/html' }), (state.imageName || 'edm') + '_editable.html');
+    return { html, textBlocks: state.slices.filter(s => s.type === 'text').length };
+  }
+
   window.EDMExporter = {
     buildHTML, exportZip, exportEml, exportOft,
     exportMailchimp, exportGmailClipboard, exportSES, exportRawHtml,
     exportGmailImage, exportGmailHtml,
     testCloudinary, exportCloudinary, exportEmlCloud, buildCdnGmailHtml,
-    exportSingleImage,
+    exportSingleImage, exportEditableTemplate,
   };
 })();

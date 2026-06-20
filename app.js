@@ -2380,6 +2380,10 @@ async function runExport(fmt) {
       const rawHtml = await window.EDMExporter.exportRawHtml(state, eo);
       _lastCdnGmailHtml = rawHtml || '';
       showAfterExport('raw');
+    } else if (fmt === 'editable') {
+      cdnHandled = true; // self-contained editable file; no CDN dual-export
+      const res = await window.EDMExporter.exportEditableTemplate(state, eo);
+      showAfterExport('editable', res);
     }
     // Cloudinary CDN dual export — Gmail (table) + Outlook/Apple (image map)
     if (!cdnHandled && eo.cloudinaryEnabled && eo.cloudName && eo.uploadPreset) {
@@ -2568,6 +2572,22 @@ function showAfterExport(fmt, result) {
           <button id="rawCopyGmailBtn" style="padding:8px 24px;font-size:13px;font-weight:600;background:#d93025;color:#fff;border:none;border-radius:6px;cursor:pointer;">Copy for Gmail</button>
           <p style="margin:6px 0 0;font-size:12px;color:#5f6368;">Copies HTML with image links directly to clipboard. Paste in Gmail compose.</p>
         </div>`,
+    },
+    editable: {
+      title: 'Editable template — .html downloaded',
+      body: `
+        <div style="margin:0 0 14px;padding:12px 14px;background:#e7f8f1;border-radius:8px;border-left:4px solid #10b981;font-size:13px;">
+          ✓ A self-contained <code>_editable.html</code> downloaded. Send it to anyone — they edit the text themselves in a browser, no tools needed.
+        </div>
+        <p style="font-weight:600;margin:0 0 8px;">What the recipient does:</p>
+        <ol style="padding-left:20px;margin:0 0 14px;font-size:13px;">
+          <li>Open the <b>.html</b> file (double-click → opens in their browser)</li>
+          <li>Click any <b>dashed text</b> and type to change it</li>
+          <li>Click <b>📋 Copy final email</b> (paste into Gmail/Outlook) or <b>💾 Download .html</b></li>
+        </ol>
+        <p style="margin:0;background:#fff4e0;padding:10px 12px;border-radius:6px;border-left:3px solid #f59e0b;font-size:12px;">
+          <b>Only text blocks are editable</b> — image slices stay fixed (they're pixels). To make text on your design editable first, draw a slice over it and use <b>🔤 Extract text (OCR)</b>, or add a <b>Text block</b> (press T).
+        </p>`,
     },
   };
   const g = guides[fmt];

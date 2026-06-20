@@ -6,12 +6,12 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="styles.css?v=0.9.9">
+<link rel="stylesheet" href="styles.css?v=0.9.10">
 </head>
 <body>
 
 <header class="topbar">
-  <h1><span>EDM Builder<span class="brand-sub">Communique · Email Design Studio</span></span> <span class="tag">v0.9.9</span></h1>
+  <h1><span>EDM Builder<span class="brand-sub">Communique · Email Design Studio</span></span> <span class="tag">v0.9.10</span></h1>
   <input type="text" id="projectNameInput" class="project-name-input" placeholder="Untitled project — click to name" />
   <span id="saveIndicator" class="save-indicator"></span>
   <div class="project-io">
@@ -36,6 +36,7 @@
         <button data-format="gmail"     class="dropdown-item"><span class="icon">📨</span> <div><b>Gmail</b><span class="desc">Download images + HTML, or copy as image.</span></div></button>
         <button data-format="ses"       class="dropdown-item"><span class="icon">☁️</span> <div><b>AWS SES</b><span class="desc">HTML + JSON request body for SendEmail API.</span></div></button>
         <button data-format="raw"       class="dropdown-item"><span class="icon">📄</span> <div><b>Raw HTML (.html)</b><span class="desc">Self-contained HTML with embedded images + links.</span></div></button>
+        <button data-format="editable"  class="dropdown-item"><span class="icon">✏️</span> <div><b>Editable template (.html)</b><span class="desc">Send it to someone — they click to edit the text in a browser, then copy/download. No slicing tool needed.</span></div></button>
       </div>
     </div>
     <button id="previewBtn" class="btn" disabled>Preview</button>
@@ -290,8 +291,8 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
-<script src="exporter.js?v=0.9.9"></script>
-<script src="app.js?v=0.9.9"></script>
+<script src="exporter.js?v=0.9.10"></script>
+<script src="app.js?v=0.9.10"></script>
 <script>
 /* Dashboard stat cards — mirrors live values from the app UI */
 (function () {
