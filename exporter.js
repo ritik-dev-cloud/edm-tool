@@ -337,7 +337,10 @@
     // No height ATTRIBUTE on purpose: a fixed height attribute + fluid width is
     // exactly what makes Outlook mobile stretch images. With only width + CSS
     // height:auto, every client scales height proportionally → never distorts.
-    const img = `<img src="${escapeAttr(src)}" width="${w}" id="${owaId}" alt="${escapeAttr(altText)}" border="0" style="display:block;vertical-align:middle;border:0 none;outline:none;text-decoration:none;width:100%;max-width:${w}px;height:auto;line-height:0;font-size:0;-ms-interpolation-mode:bicubic;">`;
+    // width:100.0001% (not exact 100%) avoids Outlook's px->pt rounding that leaves a
+    // hairline gap UNDER each stacked slice (visible when the recipient zooms). The
+    // sub-pixel overflow is clipped by the cell's overflow:hidden, so layout is unaffected.
+    const img = `<img src="${escapeAttr(src)}" width="${w}" id="${owaId}" alt="${escapeAttr(altText)}" border="0" style="display:block;vertical-align:middle;border:0 none;outline:none;text-decoration:none;width:100.0001%;max-width:${w}px;height:auto;line-height:0;font-size:0;-ms-interpolation-mode:bicubic;">`;
     const href = slice.href || defaultLink || '';
     const gmailAnchor = `<span style="color:transparent;font-size:0;line-height:0;display:none;mso-hide:all;">&nbsp;</span>`;
     if (href) {
@@ -1640,7 +1643,7 @@ table{border-collapse:collapse;border-spacing:0;mso-table-lspace:0pt;mso-table-r
     `<map name="edm-map">${areas}</map>` +
     `</div></div>`
   : `<div style="max-width:${outW}px;margin:0 auto;font-size:0;line-height:0;">` +
-    `<img src="${escapeAttr(fullImgUrl)}" width="${outW}" height="${outH}" alt="${escapeAttr(base)}" border="0" usemap="#edm-map" style="display:block;width:100%;max-width:${outW}px;height:auto;border:0 none;outline:none;text-decoration:none;-ms-interpolation-mode:bicubic;" />` +
+    `<img src="${escapeAttr(fullImgUrl)}" width="${outW}" height="${outH}" alt="${escapeAttr(base)}" border="0" usemap="#edm-map" style="display:block;width:100.0001%;max-width:${outW}px;height:auto;border:0 none;outline:none;text-decoration:none;-ms-interpolation-mode:bicubic;" />` +
     `<map name="edm-map">${areas}</map>` +
     `</div>`
 ) +
@@ -1823,7 +1826,7 @@ a{text-decoration:none;}
 <body style="margin:0;padding:0;background:${bgColor};">
 ${preheader ? `<div style="display:none;max-height:0;overflow:hidden;mso-hide:all;font-size:1px;line-height:1px;color:#ffffff;opacity:0;">${escapeHtml(preheader)}</div><div style="display:none;max-height:0;overflow:hidden;mso-hide:all;">&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;</div>` : ''}
 <div style="max-width:${outW}px;margin:0 auto;">
-<img src="${escapeAttr(imgUrl)}" width="${outW}" alt="${escapeAttr(base || 'Email')}" style="display:block;width:100%;max-width:${outW}px;height:auto;border:0;outline:none;text-decoration:none;-ms-interpolation-mode:bicubic;" />
+<img src="${escapeAttr(imgUrl)}" width="${outW}" alt="${escapeAttr(base || 'Email')}" style="display:block;width:100.0001%;max-width:${outW}px;height:auto;border:0;outline:none;text-decoration:none;-ms-interpolation-mode:bicubic;" />
 ${linksHtml}
 </div>
 </body>
