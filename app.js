@@ -231,6 +231,50 @@ function loadExternalScript(url, globalName) {
   return p;
 }
 
+// ---- OCR: extract the text baked into a design region into an editable text block ----
+// Uses Tesseract.js (browser-only, WASM) loaded on demand from CDN.
+function loadTesseract() {
+  return loadExternalScript('https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js', 'Tesseract');
+}
+
+const _DEFAULT_TEXT_STYLE = { fontSize: 16, color: '#1f2329', bg: 'transparent', bold: false, italic: false, align: 'left' };
+
+async function ocrSlice(slice, btn) {
+  if (!slice || !state.image) return;
+  const original = btn ? btn.textContent : '';
+  if (btn) { btn.disabled = true; btn.textContent = 'Loading OCR…'; }
+  try {
+    await loadTesseract();
+    // Crop the slice region at 2x for better recognition accuracy.
+    const scale = 2;
+    const cw = Math.max(1, Math.round(slice.w * scale));
+    const ch = Math.max(1, Math.round(slice.h * scale));
+    const cv = document.createElement('canvas');
+    cv.width = cw; cv.height = ch;
+    const cx = cv.getContext('2d');
+    cx.imageSmoothingEnabled = true; cx.imageSmoothingQuality = 'high';
+    cx.drawImage(state.image, slice.x, slice.y, slice.w, slice.h, 0, 0, cw, ch);
+    if (btn) btn.textContent = 'Reading text…';
+    const res = await window.Tesseract.recognize(cv, 'eng');
+    const text = ((res && res.data && res.data.text) || '').replace(/[ \t]+\n/g, '\n').replace(/\n{3,}/g, '\n\n').trim();
+    pushUndo();
+    slice.type = 'text';
+    slice.text = text;
+    if (!slice.textStyle) slice.textStyle = { ..._DEFAULT_TEXT_STYLE };
+    renderSliceList(); redrawOverlay(); runLint(); updateSteps(); scheduleSave();
+    if (!text) alert('No text was detected in that area. It has been switched to a text block — type the text in manually.');
+  } catch (err) {
+    if (btn) { btn.disabled = false; btn.textContent = original; }
+    const goManual = confirm('OCR could not run — it needs an internet connection to load the engine the first time.\n\nConvert this area to a blank text block so you can type the text manually instead?');
+    if (goManual) {
+      pushUndo();
+      slice.type = 'text';
+      if (!slice.textStyle) slice.textStyle = { ..._DEFAULT_TEXT_STYLE };
+      renderSliceList(); redrawOverlay(); scheduleSave();
+    }
+  }
+}
+
 function getFileFormat(file) {
   const ext = (file.name || '').split('.').pop().toLowerCase();
   if (ext === 'psd') return 'psd';
@@ -1632,6 +1676,7 @@ function renderSliceList() {
         <input type="url" class="slice-href" placeholder="Link URL (https://...) — leave empty for non-clickable" value="${escapeAttr(s.href)}" data-id="${s.id}">
         <input type="text" class="slice-alt" placeholder="Alt text — describes the image (for accessibility & image-blocked clients)" value="${escapeAttr(s.alt)}" data-id="${s.id}">
         <label style="display:flex;align-items:center;gap:6px;font-size:11px;color:#94a3b8;margin-top:5px;cursor:pointer;"><input type="checkbox" class="slice-decorative" data-id="${s.id}" ${s.decorative ? 'checked' : ''}> Decorative image (no alt needed)</label>
+        <button class="slice-ocr" data-id="${s.id}" title="Read the text in this area and turn it into editable, selectable live text" style="margin-top:7px;width:100%;font-size:11px;font-weight:600;padding:7px;background:#eef2ff;border:1px solid #c7d2fe;color:#3730a3;border-radius:6px;cursor:pointer;">🔤 Extract text from this area (make editable)</button>
         <label class="thumb-opt" data-id="${s.id}" style="display:${getVideoThumbUrl(s.href) ? 'flex' : 'none'};align-items:center;gap:6px;font-size:11px;color:#475569;margin-top:6px;cursor:pointer;">
           <input type="checkbox" class="slice-usethumb" data-id="${s.id}" ${s.useThumb ? 'checked' : ''}>
           🎬 Replace this area with the video's thumbnail (off = keep your design)
@@ -1676,6 +1721,14 @@ function renderSliceList() {
     cb.addEventListener('change', e => {
       const slice = state.slices.find(s => s.id == e.target.dataset.id);
       if (slice) { slice.decorative = e.target.checked; scheduleSave(); runLint(); }
+    });
+  });
+  // OCR: extract baked-in text into an editable text block
+  sliceList.querySelectorAll('.slice-ocr').forEach(b => {
+    b.addEventListener('click', e => {
+      const btn = e.currentTarget;
+      const slice = state.slices.find(s => s.id == btn.dataset.id);
+      if (slice) ocrSlice(slice, btn);
     });
   });
   // Type radio toggle
